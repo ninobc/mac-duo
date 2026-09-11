@@ -24,9 +24,9 @@ public enum DuoShaders {
         float4 more;             // dim floor at the hinge, recede, picture top edge on the glass
     };
 
-    // Fills the padded picture from a frame: inside, the frame itself; in the
-    // margin, the frame's own edge stretched out, so a blur that reaches past
-    // the edge sees more of the same light rather than black.
+    // Fills the padded picture from a frame: inside, the frame itself; the
+    // margin is black, so the blur lets the picture's edges dissolve into
+    // the dark.
     struct PadUniforms {
         float4 inset;   // inset in pixels (x, y), frame size in pixels (z, w)
     };
@@ -36,6 +36,7 @@ public enum DuoShaders {
                                 texture2d<float> frame [[texture(0)]]) {
         constexpr sampler edge(filter::linear, address::clamp_to_edge);
         float2 uv = (position.xy - u.inset.xy) / u.inset.zw;
+        if (any(uv < 0.0) || any(uv > 1.0)) { return float4(0.0, 0.0, 0.0, 1.0); }
         return float4(frame.sample(edge, uv).rgb, 1.0);
     }
 
@@ -89,24 +90,19 @@ public enum DuoShaders {
         // Behind the eye there is nothing to show.
         if (mapped.z < 0.0) { return float4(0.0, 0.0, 0.0, 1.0); }
 
-        // Distance outside the picture itself, in points. Beyond its edge the
-        // glass shows the picture's own light leaking out, not a hard cut.
-        float2 edgeDistance = max(-picturePoint, picturePoint - screenSize);
-        float outside = max(max(edgeDistance.x, edgeDistance.y), 0.0);
+        // Outside the padded picture there is only the dark.
+        float2 unit = (picturePoint - paddedOrigin) / paddedSize;
+        if (any(unit < 0.0) || any(unit > 1.0)) { return float4(0.0, 0.0, 0.0, 1.0); }
         float2 clampedPoint = clamp(picturePoint, float2(0.0), screenSize);
-        float2 clampedUnit = (clampedPoint - paddedOrigin) / paddedSize;
-        float2 texCoord = float2(clampedUnit.x, 1.0 - clampedUnit.y);
+        float2 texCoord = float2(unit.x, 1.0 - unit.y);
 
-        // Height above the hinge in the picture, scaled so the glass's own
-        // top edge always reads as 1 whatever the perspective has done.
-        float height = clamp(clampedPoint.y / screenSize.y, 0.0, 1.0);
-        float g = clamp(height / max(visibleTop, 0.25), 0.0, 1.0);
+        // Height above the hinge in the picture: 0 at the hinge, 1 at the far
+        // edge. Frost and darkness follow it linearly.
+        float g = clamp(clampedPoint.y / screenSize.y, 0.0, 1.0);
 
         // Frost. The far edge dissolves first; the hinge stays readable.
-        float blur = blurStrength * (blurFloor + (1.0 - blurFloor) * pow(g, 1.35));
+        float blur = blurStrength * (blurFloor + (1.0 - blurFloor) * g);
         float radius = blur * maxRadius;
-        // Light past the edge is diffuse, eased in so the edge itself has no seam.
-        radius = max(radius, smoothstep(0.0, 24.0, outside) * 0.35 * maxRadius);
         // Naming this `level` would shadow Metal's level() selector.
         float mip = clamp(log2(max(radius, 1.0)), 0.0, maxLevel);
 
@@ -126,17 +122,12 @@ public enum DuoShaders {
                 }
             }
         }
-        // Beyond the picture the glass carries the picture's own edge light,
-        // diffused, settling gently towards dark further out.
-        float glowReach = max(1.6 * maxRadius / pixelScale, 48.0);
-        colour *= mix(1.0, 0.45, smoothstep(0.0, glowReach * 2.5, outside));
-
         // Dimming, in linear light so the far edge fades into the dark
         // rather than going grey. It reaches full strength at `dimReach`;
         // the hinge sinks a little too, so the whole picture recedes.
         float spread = smoothstep(dimStart, max(dimReach, dimStart + 0.05), g);
         float dim = dimStrength * (dimHinge + (1.0 - dimHinge) * spread) * maxDim;
-        colour *= pow(1.0 - dim, 2.0) * recede;
+        colour *= pow(1.0 - dim, 2.2) * recede;
         colour *= exp(-pow(above / max(0.22 * screenSize.y, 1.0), 1.4));
 
         // Sheen: a soft band of light crossing the frost, tinted by the

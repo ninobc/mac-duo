@@ -5,11 +5,11 @@ import Foundation
 public struct EffectSettings: Codable, Equatable, Sendable {
 
     /// The fold starts at this angle.
-    public var startAngle: Double = 95
+    public var startAngle: Double = 90
     /// Degrees of further closing to reach full strength.
     public var span: Double = 60
     /// Blur radius at the far edge at full strength, in points.
-    public var blurRadius: Double = 120
+    public var blurRadius: Double = 135
     /// Blur at the hinge as a fraction of the far edge. 0 keeps the hinge sharp.
     public var blurFloor: Double = 0.0
     /// How dark the far edge goes, 0…1.
@@ -18,7 +18,7 @@ public struct EffectSettings: Codable, Equatable, Sendable {
     public var dimStart: Double = 0.0
     /// Height where the dimming reaches full strength. Above it, at full fold,
     /// the picture is dark.
-    public var dimReach: Double = 0.55
+    public var dimReach: Double = 0.5
     /// Dimming at the hinge as a fraction of the far edge, so the whole
     /// picture sinks a little as it folds.
     public var dimHingeFloor: Double = 0.2
@@ -27,9 +27,9 @@ public struct EffectSettings: Codable, Equatable, Sendable {
     /// How much the picture stays fixed in the room. 1 is physically right.
     public var depth: Double = 1
     /// Eye distance in screen heights. Closer means stronger perspective.
-    public var eyeDistance: Double = 4.0
+    public var eyeDistance: Double = 6.0
     /// The travelling highlight on the frosted glass.
-    public var sheen: Double = 0.3
+    public var sheen: Double = 0.25
     /// Fine grain that hides banding in the dark gradient.
     public var grain: Double = 0.5
     /// Keep the picture live under the fold instead of holding one frame.
@@ -74,15 +74,15 @@ public struct EffectSettings: Codable, Equatable, Sendable {
 
     public static let cinematic: EffectSettings = {
         var s = EffectSettings()
-        s.startAngle = 105
+        s.startAngle = 100
         s.span = 70
-        s.blurRadius = 150
+        s.blurRadius = 160
         s.dimming = 1
-        s.dimReach = 0.5
+        s.dimReach = 0.45
         s.dimHingeFloor = 0.25
         s.depth = 1.2
-        s.eyeDistance = 3.0
-        s.sheen = 0.5
+        s.eyeDistance = 4.5
+        s.sheen = 0.4
         return s
     }()
 }

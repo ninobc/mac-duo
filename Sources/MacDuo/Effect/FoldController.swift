@@ -36,7 +36,7 @@ final class FoldController {
     @ObservationIgnored private let snapshot = ScreenSnapshot()
     @ObservationIgnored private let overlay = FoldOverlay()
     @ObservationIgnored private var decider: FoldDecider
-    @ObservationIgnored private var spring = DampedSpring(frequency: 9)
+    @ObservationIgnored private var spring = DampedSpring(frequency: 11)
     @ObservationIgnored private var displayLink: CADisplayLink?
     @ObservationIgnored private var lastFrame: CFTimeInterval = 0
     @ObservationIgnored private var lastPublish: CFTimeInterval = 0

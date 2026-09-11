@@ -75,15 +75,8 @@ public struct FrameParameters {
         )
         parameters.dimReach = effect.dimReach
         parameters.dimHingeFloor = effect.dimHingeFloor
-        // The angle between the glass and the frozen picture. As it grows the
-        // picture turns edge-on: it goes dark like a surface seen at a grazing
-        // angle, and the whole glass frosts rather than streaking.
-        let separation = flat ? 0 : min(effect.depth * max(effect.startAngle - angle, 0), 84)
         parameters.topEdge = flat ? height * 10 : corners[2].y
-        let grazing = cos(separation * .pi / 180)
-        parameters.recede = max(pow(grazing, 1.3), 0.05)
-        let frostAll = FoldCurve.smoothstep((separation / 84 - 0.3) / 0.6)
-        parameters.blurFloor = max(effect.blurFloor, frostAll)
+        parameters.recede = 1
         return parameters
     }
 }

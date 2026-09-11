@@ -29,12 +29,11 @@ public struct FoldGeometry: Sendable {
 
     /// Eye distance from the middle of the screen, in screen heights, measured
     /// along the glass normal at the start angle.
-    public var eyeDistance: Double = 2.6
+    public var eyeDistance: Double = 6
 
     /// Eye height above the middle of the screen, in screen heights, measured
-    /// along the glass at the start angle. People look slightly down at a
-    /// laptop, so the default sits a little above centre.
-    public var eyeHeight: Double = 0.15
+    /// along the glass at the start angle.
+    public var eyeHeight: Double = 0
 
     /// How much of the lid's travel the picture stays behind. 1 keeps it
     /// exactly where it was in the room; 0 lets it ride along with the glass
@@ -42,9 +41,8 @@ public struct FoldGeometry: Sendable {
     public var depth: Double = 1
 
     /// The picture never turns past this far from the glass, so it cannot go
-    /// edge-on or behind the eye. The approach is soft (a tanh), so there is
-    /// no angle at which the motion changes character.
-    public var maximumSeparation: Double = 50
+    /// edge-on or behind the eye.
+    public var maximumSeparation: Double = 88
 
     /// `x` for small values, easing to `limit` and never past it.
     public static func softCap(_ x: Double, at limit: Double) -> Double {
@@ -72,7 +70,7 @@ public struct FoldGeometry: Sendable {
     /// own diffused edge light, so nothing is cut off.
     public func corners(at angle: Double) -> [ScreenPoint] {
         let travel = max(startAngle - angle, 0)
-        let separation = Self.softCap(depth * travel, at: maximumSeparation)
+        let separation = min(depth * travel, maximumSeparation)
         // The picture sits this far "behind" the glass, measured as a hinge
         // angle. With depth 1 it is the start angle itself.
         let pictureAngle = angle + separation
