@@ -32,6 +32,8 @@ private struct GeneralSettings: View {
     let controller: FoldController
     @State private var launchesAtLogin = LaunchAtLogin.isEnabled
     @State private var permissionGranted = ScreenRecordingPermission.isGranted
+    @State private var sleepDisabled = SleepControl.isSleepDisabled()
+    @State private var changingSleep = false
 
     var body: some View {
         Form {
@@ -54,6 +56,23 @@ private struct GeneralSettings: View {
                     .onChange(of: launchesAtLogin) { _, wanted in
                         launchesAtLogin = LaunchAtLogin.set(wanted)
                     }
+            }
+            Section {
+                Toggle("Keep the Mac awake with the lid closed", isOn: $sleepDisabled)
+                    .disabled(changingSleep)
+                    .onChange(of: sleepDisabled) { old, wanted in
+                        guard !changingSleep, wanted != SleepControl.isSleepDisabled() else { return }
+                        changingSleep = true
+                        Task {
+                            let actual = await SleepControl.setSleepDisabled(wanted)
+                            sleepDisabled = actual
+                            changingSleep = false
+                        }
+                    }
+                Text("Changes the system's sleep setting, so macOS asks for your password. The display still turns off when the lid is shut; the Mac keeps running, which uses battery and stays warm in a bag.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             Section {
                 Toggle("Show lid angle in the menu bar", isOn: $preferences.showsAngleInMenuBar)
@@ -85,6 +104,7 @@ private struct GeneralSettings: View {
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             permissionGranted = ScreenRecordingPermission.isGranted
             launchesAtLogin = LaunchAtLogin.isEnabled
+            if !changingSleep { sleepDisabled = SleepControl.isSleepDisabled() }
         }
         .task {
             while !Task.isCancelled {

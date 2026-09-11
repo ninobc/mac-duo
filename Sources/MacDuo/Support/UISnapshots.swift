@@ -35,13 +35,14 @@ enum UISnapshots {
         // The menu's rows, stacked as they appear in the dropdown.
         let stack = NSStackView(views: [
             MenuToggleRow(title: "Mac Duo", isOn: true, emphasised: true, onChange: { _ in }),
+            MenuToggleRow(title: "Keep Awake When Closed", isOn: false, onChange: { _ in }),
             MenuSliderRow(title: "Starts at", value: 100, range: 40...125, step: 1, format: { String(format: "%.0f°", $0) }, onChange: { _ in }),
             MenuSliderRow(title: "Frost", value: 72, range: 16...180, step: 2, format: { String(format: "%.0f pt", $0) }, onChange: { _ in }),
             MenuSliderRow(title: "Darkness", value: 1, range: 0...1, step: 0.05, format: { String(format: "%.0f%%", $0 * 100) }, onChange: { _ in }),
         ])
         stack.orientation = .vertical
         stack.spacing = 0
-        stack.frame = NSRect(x: 0, y: 0, width: 260, height: 172)
+        stack.frame = NSRect(x: 0, y: 0, width: 260, height: 200)
         for view in stack.arrangedSubviews { view.widthAnchor.constraint(equalToConstant: 260).isActive = true }
         snapshotView(stack, to: directory.appendingPathComponent("menu-sliders.png"))
 

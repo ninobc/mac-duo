@@ -24,6 +24,8 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     private var wakeRow: MenuToggleRow!
     private var angleRow: MenuToggleRow!
     private var loginRow: MenuToggleRow!
+    private var awakeRow: MenuToggleRow!
+    private var isChangingSleep = false
     private var startRow: MenuSliderRow!
     private var frostRow: MenuSliderRow!
     private var darkRow: MenuSliderRow!
@@ -111,7 +113,10 @@ final class StatusItemController: NSObject, NSMenuDelegate {
             let actual = LaunchAtLogin.set(on)
             self?.loginRow.set(isOn: actual)
         }
-        for row in [liveRow!, wakeRow!, angleRow!, loginRow!] {
+        awakeRow = MenuToggleRow(title: "Keep Awake When Closed", isOn: SleepControl.isSleepDisabled()) { [weak self] on in
+            self?.changeSleep(disabled: on)
+        }
+        for row in [liveRow!, wakeRow!, awakeRow!, angleRow!, loginRow!] {
             menu.addItem(viewItem(row))
         }
         menu.addItem(.separator())
@@ -131,6 +136,18 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         let quit = NSMenuItem(title: "Quit Mac Duo", action: #selector(quit), keyEquivalent: "q")
         quit.target = self
         menu.addItem(quit)
+    }
+
+    private func changeSleep(disabled: Bool) {
+        isChangingSleep = true
+        awakeRow.isEnabled = false
+        Task { [weak self] in
+            let actual = await SleepControl.setSleepDisabled(disabled)
+            guard let self else { return }
+            self.awakeRow.set(isOn: actual)
+            self.awakeRow.isEnabled = true
+            self.isChangingSleep = false
+        }
     }
 
     private func viewItem(_ view: NSView) -> NSMenuItem {
@@ -161,6 +178,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         wakeRow.set(isOn: preferences.focusOnWake)
         angleRow.set(isOn: preferences.showsAngleInMenuBar)
         loginRow.set(isOn: LaunchAtLogin.isEnabled)
+        if !isChangingSleep { awakeRow.set(isOn: SleepControl.isSleepDisabled()) }
         for row in [liveRow!, wakeRow!, angleRow!] { row.isEnabled = status != .noSensor }
         previewItem.isEnabled = status == .ready || status == .off
         permissionItem.isHidden = status != .needsPermission
