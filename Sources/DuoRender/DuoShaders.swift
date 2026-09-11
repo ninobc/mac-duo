@@ -21,7 +21,7 @@ public enum DuoShaders {
         float4 shape;            // blur floor, max dim, pixel scale, max mip level
         float4 light;            // dim start, dim strength, visible top, sheen amount
         float4 extra;            // sheen position, grain, time, dim reach
-        float4 more;             // dim floor at the hinge, recede, unused
+        float4 more;             // dim floor at the hinge, recede, picture top edge on the glass
     };
 
     // Fills the padded picture from a frame: inside, the frame itself; in the
@@ -72,9 +72,15 @@ public enum DuoShaders {
         const float  dimReach     = u.extra.w;
         const float  dimHinge     = u.more.x;
         const float  recede       = u.more.y;
+        const float  topEdge      = u.more.z;
 
         // Fragments are pixels with y down; the geometry is points with y up.
         float2 screenPoint = float2(position.x / pixelScale, screenSize.y - position.y / pixelScale);
+        // Above the picture's far edge the glass carries the edge's own light,
+        // fading in screen space, so there is never a hard line where the
+        // picture ends. Rows above the edge sample the edge itself.
+        float above = max(screenPoint.y - (topEdge - 2.0), 0.0);
+        screenPoint.y = min(screenPoint.y, topEdge - 2.0);
         float3x3 toPicture = float3x3(u.column0.xyz, u.column1.xyz, u.column2.xyz);
         float3 mapped = toPicture * float3(screenPoint, 1.0);
         if (abs(mapped.z) < 1e-6) { return float4(0.0, 0.0, 0.0, 1.0); }
@@ -131,6 +137,7 @@ public enum DuoShaders {
         float spread = smoothstep(dimStart, max(dimReach, dimStart + 0.05), g);
         float dim = dimStrength * (dimHinge + (1.0 - dimHinge) * spread) * maxDim;
         colour *= pow(1.0 - dim, 2.0) * recede;
+        colour *= exp(-pow(above / max(0.22 * screenSize.y, 1.0), 1.4));
 
         // Sheen: a soft band of light crossing the frost, tinted by the
         // picture's own average colour (the top of the pyramid).

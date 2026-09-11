@@ -42,8 +42,14 @@ public struct FoldGeometry: Sendable {
     public var depth: Double = 1
 
     /// The picture never turns past this far from the glass, so it cannot go
-    /// edge-on or behind the eye.
-    public var maximumSeparation: Double = 84
+    /// edge-on or behind the eye. The approach is soft (a tanh), so there is
+    /// no angle at which the motion changes character.
+    public var maximumSeparation: Double = 50
+
+    /// `x` for small values, easing to `limit` and never past it.
+    public static func softCap(_ x: Double, at limit: Double) -> Double {
+        limit * tanh(x / limit)
+    }
 
     public init(screenWidth: Double, screenHeight: Double, startAngle: Double,
                 eyeDistance: Double = 2.6, eyeHeight: Double = 0.15, depth: Double = 1) {
@@ -66,7 +72,7 @@ public struct FoldGeometry: Sendable {
     /// own diffused edge light, so nothing is cut off.
     public func corners(at angle: Double) -> [ScreenPoint] {
         let travel = max(startAngle - angle, 0)
-        let separation = min(depth * travel, maximumSeparation)
+        let separation = Self.softCap(depth * travel, at: maximumSeparation)
         // The picture sits this far "behind" the glass, measured as a hinge
         // angle. With depth 1 it is the start angle itself.
         let pictureAngle = angle + separation
