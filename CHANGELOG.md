@@ -1,6 +1,11 @@
 # Changelog
 
-## 1.0.0 — unreleased
+## 1.0.1 — 2026-09-11
+
+- Check for Updates now reads GitHub Releases directly and downloads the disk image into Downloads, then opens it.
+- Releases publish version-less `Mac-Duo.dmg` and `Mac-Duo.zip` so the download link on mac-duo.com always points at the latest build.
+
+## 1.0.0 — 2026-09-11
 
 First release.
 
