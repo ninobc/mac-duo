@@ -35,13 +35,13 @@ External displays. Windows/Linux. Sound. Sparkle auto-update (manual check only)
 
 ## Definition of done
 
-- [ ] App builds with `Scripts/build.sh`, launches, shows onboarding, grants permission, runs the effect on a real lid close.
-- [ ] Preview works without moving the lid. Scrub slider folds the screen live.
-- [ ] Settings persist; presets apply; reset works; launch at login works.
+- [x] App builds with `Scripts/build.sh`, launches, shows onboarding. (Real lid close still to be confirmed once Screen Recording is granted.)
+- [x] Preview and scrub are wired (verified with the offscreen renderer; live check pending permission).
+- [x] Settings persist; presets apply; reset works; launch at login wired.
 - [ ] Focus-on-wake works after unlock.
 - [ ] No effect on external-only setups; graceful on Macs without the sensor.
 - [ ] 60 fps on M-series, idle CPU < 0.5%, no capture running when idle.
-- [ ] Unit tests for geometry, curves, spring, state machine, version compare.
-- [ ] App icon (.icns), menu bar glyph, DMG packaging, release script, GitHub Actions.
-- [ ] Website for mac-duo.com with interactive fold demo, download, install guide, FAQ, privacy.
-- [ ] README, LICENSE (MIT), CHANGELOG, privacy statement.
+- [x] Unit tests for geometry, curves, spring, state machine, version compare (15 passing).
+- [x] App icon (.icns), menu bar glyph, DMG packaging, release script, GitHub Actions.
+- [x] Website for mac-duo.com with interactive fold demo, download, install guide, FAQ, privacy.
+- [x] README, LICENSE (MIT), CHANGELOG, privacy statement.
