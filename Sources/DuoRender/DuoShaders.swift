@@ -76,8 +76,8 @@ public enum DuoShaders {
         if (abs(mapped.z) < 1e-6) { return float4(0.0, 0.0, 0.0, 1.0); }
         float2 picturePoint = mapped.xy / mapped.z;
 
-        float2 unit = (picturePoint - paddedOrigin) / paddedSize;
-        if (any(unit < 0.0) || any(unit > 1.0)) { return float4(0.0, 0.0, 0.0, 1.0); }
+        // Behind the eye there is nothing to show.
+        if (mapped.z < 0.0) { return float4(0.0, 0.0, 0.0, 1.0); }
 
         // Distance outside the picture itself, in points. Beyond its edge the
         // glass shows the picture's own light leaking out, not a hard cut.
@@ -116,9 +116,10 @@ public enum DuoShaders {
                 }
             }
         }
-        // The leak fades with distance from the edge.
-        float glowReach = max(0.9 * maxRadius / pixelScale, 24.0);
-        colour *= exp(-pow(outside / glowReach, 1.3));
+        // Beyond the picture the glass carries the picture's own edge light,
+        // diffused, settling gently towards dark further out.
+        float glowReach = max(1.6 * maxRadius / pixelScale, 48.0);
+        colour *= mix(1.0, 0.45, smoothstep(0.0, glowReach * 2.5, outside));
 
         // Dimming, in linear light so the far edge fades into the dark
         // rather than going grey. Full black only at the very top.

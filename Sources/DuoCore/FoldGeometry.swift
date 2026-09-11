@@ -55,16 +55,15 @@ public struct FoldGeometry: Sendable {
         self.depth = depth
     }
 
-    /// Where the frozen picture lands on the glass when the lid is at `angle`.
-    /// Order: bottom-left, bottom-right, top-right, top-left.
+    /// Where the four corners of the frozen picture land on the glass when the
+    /// lid is at `angle`. Order: bottom-left, bottom-right, top-right, top-left.
     ///
     /// At `angle == startAngle` this is exactly the screen rectangle. As the
-    /// lid folds towards the eye the glass covers less of the room, so the
-    /// picture's far edge climbs past the top of the glass: the picture holds
-    /// still and the glass slides down over it. The mapping keeps every
-    /// column where it is (no keystone), so the picture always fills the
-    /// glass from edge to edge and nothing is cut off at the sides; the
-    /// vertical re-projection carries the whole feeling of depth.
+    /// lid folds towards the eye the picture recedes behind the glass: its far
+    /// edge climbs past the top of the glass and its sides converge, the way a
+    /// plane leaning away from you looks. That convergence is the depth. The
+    /// shader fills the glass beyond the picture's sides with the picture's
+    /// own diffused edge light, so nothing is cut off.
     public func corners(at angle: Double) -> [ScreenPoint] {
         let travel = max(startAngle - angle, 0)
         let separation = min(depth * travel, maximumSeparation)
@@ -84,29 +83,23 @@ public struct FoldGeometry: Sendable {
         let reach = eyeDistance * height
         let lift = eyeHeight * height
         let up = (y: sin(start), z: cos(start))
-        let eye = (y: centre.y + normal.y * reach + up.y * lift,
+        let eye = (x: width / 2,
+                   y: centre.y + normal.y * reach + up.y * lift,
                    z: centre.z + normal.z * reach + up.z * lift)
 
         // Glass plane through the hinge with normal n(lid).
         let n = (y: -cos(lid), z: sin(lid))
         let nDotEye = n.y * eye.y + n.z * eye.z
 
-        /// Height on the glass where the picture point at height `ph` shows.
-        func along(_ ph: Double) -> Double {
-            let q = (y: ph * sin(pic), z: ph * cos(pic))
-            let d = (y: q.y - eye.y, z: q.z - eye.z)
+        func project(_ px: Double, _ ph: Double) -> ScreenPoint {
+            let q = (x: px, y: ph * sin(pic), z: ph * cos(pic))
+            let d = (x: q.x - eye.x, y: q.y - eye.y, z: q.z - eye.z)
             let nDotD = n.y * d.y + n.z * d.z
             let t = abs(nDotD) < 1e-9 ? 1 : max(-nDotEye / nDotD, 1e-3)
-            let hit = (y: eye.y + t * d.y, z: eye.z + t * d.z)
-            return hit.y * sin(lid) + hit.z * cos(lid)
+            let hit = (x: eye.x + t * d.x, y: eye.y + t * d.y, z: eye.z + t * d.z)
+            return ScreenPoint(x: hit.x, y: hit.y * sin(lid) + hit.z * cos(lid))
         }
-        let top = max(along(height), height * 0.5)
 
-        return [
-            ScreenPoint(x: 0, y: 0),
-            ScreenPoint(x: width, y: 0),
-            ScreenPoint(x: width, y: top),
-            ScreenPoint(x: 0, y: top),
-        ]
+        return [project(0, 0), project(width, 0), project(width, height), project(0, height)]
     }
 }
