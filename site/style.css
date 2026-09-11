@@ -100,15 +100,14 @@ body.page .nav { position: static; color: var(--ink); mix-blend-mode: normal; }
 }
 .readout .angle { font-size: 44px; font-weight: 500; letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums; }
 .readout .hint { font-size: 12px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--peach); }
-.controls { position: absolute; right: 28px; top: 190px; width: 160px; }
-.controls input[type=range] { width: 100%; accent-color: var(--ember); }
+.readout input[type=range] { width: 160px; margin-top: 10px; accent-color: var(--ember); }
 @media (max-width: 720px) {
   .nav nav a:not(.button) { display: none; }
   .hero { height: 220vh; }
   .hero-copy { padding-bottom: 48px; }
   .readout { top: 72px; }
   .readout .angle { font-size: 32px; }
-  .controls { top: 150px; width: 120px; }
+  .readout input[type=range] { width: 120px; }
 }
 
 /* Sections */

@@ -132,9 +132,9 @@
     c.textAlign = 'center';
     c.shadowColor = 'rgba(0,0,0,0.35)'; c.shadowBlur = 24;
     c.fillStyle = 'rgba(255,255,255,0.96)';
-    c.font = `500 ${Math.round(screen.h * 0.06)}px -apple-system, system-ui, sans-serif`;
+    c.font = `500 ${Math.round(Math.min(screen.h * 0.06, screen.w * 0.05))}px -apple-system, system-ui, sans-serif`;
     c.fillText(now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' }), screen.w / 2, screen.h * 0.17);
-    c.font = `700 ${Math.round(screen.h * 0.22)}px -apple-system, system-ui, sans-serif`;
+    c.font = `700 ${Math.round(Math.min(screen.h * 0.22, screen.w * 0.24))}px -apple-system, system-ui, sans-serif`;
     c.fillText('9:41', screen.w / 2, screen.h * 0.32);
     c.restore();
 
