@@ -18,6 +18,7 @@ final class Preferences {
         static let hasCompletedOnboarding = "hasCompletedOnboarding"
         static let lastUpdateCheck = "lastUpdateCheck"
         static let skippedUpdateVersion = "skippedUpdateVersion"
+        static let effectSchema = "effectSchema"
         static let all = [effect, isEnabled, focusOnWake, showsAngleInMenuBar, checksForUpdates,
                           hasCompletedOnboarding, lastUpdateCheck, skippedUpdateVersion]
     }
@@ -62,6 +63,13 @@ final class Preferences {
             Key.checksForUpdates: true,
             Key.hasCompletedOnboarding: false,
         ])
+        // The look was retuned in schema 2 (no sheen or grain, reference
+        // geometry); settings saved before that start again from Duo.
+        let schema = 2
+        if defaults.integer(forKey: Key.effectSchema) < schema {
+            defaults.removeObject(forKey: Key.effect)
+            defaults.set(schema, forKey: Key.effectSchema)
+        }
         effect = Self.load(EffectSettings.self, forKey: Key.effect, from: defaults) ?? .duo
         isEnabled = defaults.bool(forKey: Key.isEnabled)
         focusOnWake = defaults.bool(forKey: Key.focusOnWake)
