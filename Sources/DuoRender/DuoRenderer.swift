@@ -24,6 +24,8 @@ public struct FrameParameters {
     public var time: Double
     public var dimReach: Double = 0.55
     public var dimHingeFloor: Double = 0.2
+    /// How much light is left as the picture turns edge-on to the glass.
+    public var recede: Double = 1
 
     public init(corners: [ScreenPoint], blurStrength: Double, dimStrength: Double, blurFloor: Double, maxDim: Double,
                 dimStart: Double, maxBlurRadius: Double, visibleTop: Double, sheenAmount: Double, sheenPosition: Double,
@@ -71,6 +73,14 @@ public struct FrameParameters {
         )
         parameters.dimReach = effect.dimReach
         parameters.dimHingeFloor = effect.dimHingeFloor
+        // The angle between the glass and the frozen picture. As it grows the
+        // picture turns edge-on: it goes dark like a surface seen at a grazing
+        // angle, and the whole glass frosts rather than streaking.
+        let separation = flat ? 0 : min(effect.depth * max(effect.startAngle - angle, 0), 84)
+        let grazing = cos(separation * .pi / 180)
+        parameters.recede = max(pow(grazing, 1.3), 0.05)
+        let frostAll = FoldCurve.smoothstep((separation / 84 - 0.3) / 0.6)
+        parameters.blurFloor = max(effect.blurFloor, frostAll)
         return parameters
     }
 }
@@ -407,7 +417,7 @@ public final class DuoRenderer {
             shape: SIMD4(Float(p.blurFloor), Float(p.maxDim), Float(pixelScale), maxLevel),
             light: SIMD4(Float(p.dimStart), Float(p.dimStrength), Float(p.visibleTop), Float(p.sheenAmount)),
             extra: SIMD4(Float(p.sheenPosition), Float(p.grain), Float(p.time.truncatingRemainder(dividingBy: 1000)), Float(p.dimReach)),
-            more: SIMD4(Float(p.dimHingeFloor), 0, 0, 0)
+            more: SIMD4(Float(p.dimHingeFloor), Float(p.recede), 0, 0)
         )
         let pass = MTLRenderPassDescriptor()
         pass.colorAttachments[0].texture = target
