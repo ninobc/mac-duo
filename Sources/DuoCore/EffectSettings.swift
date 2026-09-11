@@ -1,0 +1,82 @@
+import Foundation
+
+/// Everything that shapes the look. Stored as one value so presets are a
+/// single assignment and "custom" is any deviation from them.
+public struct EffectSettings: Codable, Equatable, Sendable {
+
+    /// The fold starts at this angle.
+    public var startAngle: Double = 100
+    /// Degrees of further closing to reach full strength.
+    public var span: Double = 60
+    /// Blur radius at the far edge at full strength, in points.
+    public var blurRadius: Double = 72
+    /// Blur at the hinge as a fraction of the far edge. 0 keeps the hinge sharp.
+    public var blurFloor: Double = 0.06
+    /// How dark the far edge goes, 0…1.
+    public var dimming: Double = 1
+    /// Height, as a fraction of the screen, where dimming starts to bite.
+    public var dimStart: Double = 0.12
+    /// How much the picture stays fixed in the room. 1 is physically right.
+    public var depth: Double = 1
+    /// Eye distance in screen heights. Closer means stronger perspective.
+    public var eyeDistance: Double = 2.6
+    /// The travelling highlight on the frosted glass.
+    public var sheen: Double = 0.5
+    /// Fine grain that hides banding in the dark gradient.
+    public var grain: Double = 0.5
+    /// Keep the picture live under the fold instead of holding one frame.
+    public var livePicture: Bool = true
+
+    public init() {}
+
+    public static let duo = EffectSettings()
+
+    public static let soft: EffectSettings = {
+        var s = EffectSettings()
+        s.startAngle = 95
+        s.span = 45
+        s.blurRadius = 48
+        s.dimming = 0.7
+        s.depth = 0.8
+        s.sheen = 0.35
+        return s
+    }()
+
+    public static let cinematic: EffectSettings = {
+        var s = EffectSettings()
+        s.startAngle = 110
+        s.span = 75
+        s.blurRadius = 110
+        s.dimming = 1
+        s.depth = 1.3
+        s.eyeDistance = 2.1
+        s.sheen = 0.7
+        return s
+    }()
+}
+
+/// The named looks in the menu.
+public enum EffectPreset: String, CaseIterable, Codable, Sendable {
+    case duo, soft, cinematic
+
+    public var title: String {
+        switch self {
+        case .duo: return "Duo"
+        case .soft: return "Soft"
+        case .cinematic: return "Cinematic"
+        }
+    }
+
+    public var settings: EffectSettings {
+        switch self {
+        case .duo: return .duo
+        case .soft: return .soft
+        case .cinematic: return .cinematic
+        }
+    }
+
+    /// The preset these settings equal, if any.
+    public static func matching(_ settings: EffectSettings) -> EffectPreset? {
+        allCases.first { $0.settings == settings }
+    }
+}

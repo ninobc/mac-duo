@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Privacy — Mac Duo</title>
+  <meta name="description" content="What Mac Duo does with your screen: nothing that leaves the Mac.">
+  <link rel="icon" href="assets/favicon.png" type="image/png">
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300..800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="page">
+  <header class="nav">
+    <a class="brand" href="index.html" aria-label="Mac Duo home">
+      <svg class="glyph" viewBox="0 0 20 16" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4.5 12.5h12.5"/><path d="M4.5 12.5l-3.4-10.4"/></g></svg>
+      <span>Mac Duo</span>
+    </a>
+    <nav><a href="index.html#download">Download</a></nav>
+  </header>
+  <main class="wrap prose">
+    <h1>Privacy</h1>
+    <p class="meta">Last updated September 11, 2026</p>
+    <p>Mac Duo is a small app that runs on your Mac and nowhere else. This page says exactly what it touches.</p>
+    <h2>Your screen</h2>
+    <p>To fold the desktop, Mac Duo has to see it. It asks macOS for Screen Recording access once. With that access it captures the built-in display only while the lid is closing towards the fold angle and while the fold is on screen. Frames are handed to the GPU as textures and discarded when the fold ends. Mac Duo never writes a frame to disk and never sends one anywhere.</p>
+    <h2>The lid angle</h2>
+    <p>The hinge angle comes from a sensor built into recent MacBooks. Reading it needs no permission and reveals nothing about you. Mac Duo can show the angle in the menu bar if you ask it to.</p>
+    <h2>Network</h2>
+    <p>The only network request Mac Duo makes is a check for new versions: a small JSON file at <code>mac-duo.com/updates.json</code>, at most once a day, sending only the app's name and version in the request headers. You can turn this off in Settings › General. Nothing else talks to the internet. There are no analytics, no crash reporting and no accounts.</p>
+    <h2>Settings</h2>
+    <p>Your preferences are stored in the standard macOS defaults for the app on your Mac. Nothing is synced.</p>
+    <h2>Contact</h2>
+    <p>Questions go to <a href="mailto:hello@mac-duo.com">hello@mac-duo.com</a>.</p>
+  </main>
+  <footer><div class="wrap"><p>© 2026 Nino Bouchedid · <a href="index.html">Home</a></p></div></footer>
+</body>
+</html>

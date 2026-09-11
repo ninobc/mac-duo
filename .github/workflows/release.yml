@@ -1,0 +1,59 @@
+name: Release
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select Xcode
+        run: sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+      - name: Version
+        id: v
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+      - name: Import Developer ID certificate
+        if: ${{ secrets.APPLE_CERTIFICATE_P12_BASE64 != '' }}
+        env:
+          P12: ${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
+          PASS="$(openssl rand -base64 24)"
+          security create-keychain -p "$PASS" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$PASS" "$KEYCHAIN"
+          echo "$P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" -k "$KEYCHAIN" -P "$P12_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$PASS" "$KEYCHAIN"
+          security list-keychains -d user -s "$KEYCHAIN"
+          ID="$(security find-identity -v -p codesigning "$KEYCHAIN" | awk '/Developer ID Application/ {print $2; exit}')"
+          echo "SIGN_IDENTITY=$ID" >> "$GITHUB_ENV"
+      - name: Notary credentials
+        if: ${{ secrets.APPLE_NOTARY_KEY_P8_BASE64 != '' }}
+        env:
+          KEY: ${{ secrets.APPLE_NOTARY_KEY_P8_BASE64 }}
+          KEY_ID: ${{ secrets.APPLE_NOTARY_KEY_ID }}
+          ISSUER: ${{ secrets.APPLE_NOTARY_ISSUER_ID }}
+        run: |
+          echo "$KEY" | base64 --decode > "$RUNNER_TEMP/AuthKey.p8"
+          xcrun notarytool store-credentials macduo --key "$RUNNER_TEMP/AuthKey.p8" --key-id "$KEY_ID" --issuer "$ISSUER"
+          echo "NOTARY_PROFILE=macduo" >> "$GITHUB_ENV"
+      - name: Build, sign, package
+        env:
+          APP_VERSION: ${{ steps.v.outputs.version }}
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: |
+          Scripts/make-icon.sh
+          Scripts/build.sh --universal
+          Scripts/package-dmg.sh
+      - name: GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/*.dmg dist/*.zip dist/SHA256SUMS.txt \
+            --title "Mac Duo ${{ steps.v.outputs.version }}" \
+            --notes "Open the DMG and drag Mac Duo to Applications. Requires macOS 14 and a MacBook with a lid angle sensor. See https://mac-duo.com for the install guide."

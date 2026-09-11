@@ -1,0 +1,24 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.4.app || sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+      - name: Toolchain
+        run: swift --version
+      - name: Tests
+        run: swift test
+      - name: Build app
+        run: Scripts/build.sh
+      - name: Package
+        run: Scripts/package-dmg.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Mac-Duo-${{ github.sha }}
+          path: dist/*

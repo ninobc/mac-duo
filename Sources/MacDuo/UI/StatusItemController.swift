@@ -1,0 +1,178 @@
+import AppKit
+import DuoCore
+
+/// The menu bar item and its menu.
+@MainActor
+final class StatusItemController: NSObject, NSMenuDelegate {
+
+    private let statusItem: NSStatusItem
+    private let menu = NSMenu()
+    private let preferences: Preferences
+    private let controller: FoldController
+    private let windows: WindowCoordinator
+    private let updates: UpdateCoordinator
+    private var refreshTimer: Timer?
+    private var lastGlyph: (angle: Int, active: Bool) = (-1, false)
+
+    private let statusLine = NSMenuItem()
+    private let enableItem = NSMenuItem(title: "Enable Mac Duo", action: #selector(toggleEnabled), keyEquivalent: "")
+    private let previewItem = NSMenuItem(title: "Preview Fold", action: #selector(preview), keyEquivalent: "p")
+    private let styleMenu = NSMenu(title: "Style")
+    private let updateItem = NSMenuItem(title: "Check for Updates…", action: #selector(checkForUpdates), keyEquivalent: "")
+    private let permissionItem = NSMenuItem(title: "Allow Screen Recording…", action: #selector(openPermission), keyEquivalent: "")
+
+    init(preferences: Preferences, controller: FoldController, windows: WindowCoordinator, updates: UpdateCoordinator) {
+        self.preferences = preferences
+        self.controller = controller
+        self.windows = windows
+        self.updates = updates
+        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        super.init()
+        buildMenu()
+        statusItem.menu = menu
+        statusItem.button?.image = MenuBarGlyph.image()
+        statusItem.button?.imagePosition = .imageLeading
+        refresh()
+        let timer = Timer(timeInterval: 0.2, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.refresh() }
+        }
+        timer.tolerance = 0.05
+        RunLoop.main.add(timer, forMode: .common)
+        refreshTimer = timer
+    }
+
+    private func buildMenu() {
+        menu.delegate = self
+        menu.autoenablesItems = false
+
+        statusLine.isEnabled = false
+        menu.addItem(statusLine)
+        menu.addItem(.separator())
+
+        for item in [enableItem, previewItem] {
+            item.target = self
+            menu.addItem(item)
+        }
+        previewItem.keyEquivalentModifierMask = [.command, .shift]
+
+        let style = NSMenuItem(title: "Style", action: nil, keyEquivalent: "")
+        for preset in EffectPreset.allCases {
+            let item = NSMenuItem(title: preset.title, action: #selector(choosePreset(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = preset.rawValue
+            styleMenu.addItem(item)
+        }
+        styleMenu.addItem(.separator())
+        let custom = NSMenuItem(title: "Custom…", action: #selector(openEffectSettings), keyEquivalent: "")
+        custom.target = self
+        styleMenu.addItem(custom)
+        style.submenu = styleMenu
+        menu.addItem(style)
+
+        permissionItem.target = self
+        menu.addItem(permissionItem)
+        menu.addItem(.separator())
+
+        let settings = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
+        settings.target = self
+        menu.addItem(settings)
+        updateItem.target = self
+        menu.addItem(updateItem)
+        let about = NSMenuItem(title: "About Mac Duo", action: #selector(openAbout), keyEquivalent: "")
+        about.target = self
+        menu.addItem(about)
+        menu.addItem(.separator())
+        let quit = NSMenuItem(title: "Quit Mac Duo", action: #selector(quit), keyEquivalent: "q")
+        quit.target = self
+        menu.addItem(quit)
+    }
+
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        let status = controller.status
+        let angle = String(format: "%.0f°", controller.angle)
+        switch status {
+        case .noSensor:
+            statusLine.title = "No lid angle sensor on this Mac"
+        case .needsPermission:
+            statusLine.title = "Screen Recording access needed"
+        case .off:
+            statusLine.title = "Mac Duo is off  ·  \(angle)"
+        case .ready:
+            statusLine.title = controller.isActive ? "Folding  ·  \(angle)" : "Ready  ·  \(angle)"
+        }
+        enableItem.state = preferences.isEnabled ? .on : .off
+        enableItem.isEnabled = status != .noSensor
+        previewItem.isEnabled = status == .ready || status == .off
+        permissionItem.isHidden = status != .needsPermission
+        let current = preferences.preset
+        for item in styleMenu.items {
+            guard let raw = item.representedObject as? String, let preset = EffectPreset(rawValue: raw) else {
+                if item.title == "Custom…" { item.state = current == nil ? .on : .off }
+                continue
+            }
+            item.state = preset == current ? .on : .off
+        }
+        if let update = updates.available {
+            updateItem.title = "Update to \(update.version)…"
+        } else {
+            updateItem.title = updates.isChecking ? "Checking for Updates…" : "Check for Updates…"
+        }
+        updateItem.isEnabled = !updates.isChecking
+    }
+
+    private func refresh() {
+        guard let button = statusItem.button else { return }
+        let angle = Int(controller.angle.rounded())
+        let active = controller.isActive
+        if lastGlyph.angle != angle || lastGlyph.active != active {
+            lastGlyph = (angle, active)
+            button.image = MenuBarGlyph.image(angle: controller.sensorAvailable ? controller.angle : 108, active: active)
+        }
+        let title = preferences.showsAngleInMenuBar && controller.sensorAvailable ? String(format: " %.0f°", controller.angle) : ""
+        if button.title != title { button.title = title }
+        button.appearsDisabled = !preferences.isEnabled || controller.status == .noSensor
+    }
+
+    // MARK: Actions
+
+    @objc private func toggleEnabled() {
+        preferences.isEnabled.toggle()
+    }
+
+    @objc private func preview() {
+        controller.preview()
+    }
+
+    @objc private func choosePreset(_ sender: NSMenuItem) {
+        guard let raw = sender.representedObject as? String, let preset = EffectPreset(rawValue: raw) else { return }
+        preferences.apply(preset)
+    }
+
+    @objc private func openEffectSettings() {
+        windows.showSettings(tab: .effect)
+    }
+
+    @objc private func openSettings() {
+        windows.showSettings()
+    }
+
+    @objc private func openAbout() {
+        windows.showSettings(tab: .about)
+    }
+
+    @objc private func openPermission() {
+        windows.showOnboarding()
+    }
+
+    @objc private func checkForUpdates() {
+        if let update = updates.available {
+            updates.offer(update)
+        } else {
+            Task { await updates.check(interactive: true) }
+        }
+    }
+
+    @objc private func quit() {
+        NSApp.terminate(nil)
+    }
+}

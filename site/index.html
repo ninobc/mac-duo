@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mac Duo — Close the lid. The desktop stays.</title>
+  <meta name="description" content="Mac Duo brings the iPhone Duo fold to your MacBook. As the lid comes down, what's on screen holds still in the room and softens into frosted light. Free, open source, macOS 14+.">
+  <meta property="og:title" content="Mac Duo — Close the lid. The desktop stays.">
+  <meta property="og:description" content="The iPhone Duo fold, on your MacBook. Free and open source.">
+  <meta property="og:image" content="https://mac-duo.com/assets/og.png">
+  <meta property="og:url" content="https://mac-duo.com">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#0A0D1F">
+  <link rel="icon" href="assets/favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="assets/icon-180.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300..800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <a class="skip" href="#how">Skip to content</a>
+
+  <header class="nav">
+    <a class="brand" href="#top" aria-label="Mac Duo home">
+      <svg class="glyph" viewBox="0 0 20 16" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4.5 12.5h12.5"/><path class="glyph-lid" d="M4.5 12.5l-3.4-10.4"/></g></svg>
+      <span>Mac Duo</span>
+    </a>
+    <nav>
+      <a href="#how">How it works</a>
+      <a href="#install">Install</a>
+      <a href="#faq">Questions</a>
+      <a href="https://github.com/ninobc/mac-duo" rel="noopener">Source</a>
+      <a class="button small" href="#download">Download</a>
+    </nav>
+  </header>
+
+  <main id="top">
+    <!-- The hero is the effect itself: scroll, and the desktop below folds
+         exactly as Mac Duo folds it, driven by the same maths as the app. -->
+    <section class="hero" id="hero" aria-label="Live demo of the fold">
+      <div class="stage">
+        <canvas id="fold" aria-hidden="true"></canvas>
+        <div class="hero-copy">
+          <p class="eyebrow">For MacBook · Free · Open source</p>
+          <h1>Close the lid.<br>The desktop stays.</h1>
+          <p class="lede">Mac Duo brings the iPhone&nbsp;Duo fold to your MacBook. As the lid comes down, what's on screen holds still in the room and softens into frosted light. Open it, and everything comes back into focus.</p>
+          <div class="cta">
+            <a class="button" href="#download">Download for macOS</a>
+            <span class="meta">macOS 14 or later · Apple silicon &amp; Intel</span>
+          </div>
+        </div>
+        <div class="readout" aria-live="off">
+          <svg class="glyph big" viewBox="0 0 20 16" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4.5 12.5h12.5"/><path id="lid-line" d="M4.5 12.5l-3.4-10.4"/></g></svg>
+          <span class="angle"><span id="angle">108</span>°</span>
+          <span class="hint" id="hint">Scroll to close the lid</span>
+        </div>
+        <div class="controls">
+          <label for="scrub" class="visually-hidden">Lid angle</label>
+          <input id="scrub" type="range" min="0" max="1000" value="0" aria-label="Fold the lid">
+        </div>
+      </div>
+    </section>
+
+    <section class="how" id="how">
+      <div class="wrap">
+        <h2>What happens when you close it</h2>
+        <div class="cols">
+          <article>
+            <h3>The picture holds still</h3>
+            <p>The moment the lid passes 100°, Mac Duo freezes the desktop where it is in the room. From then on the glass shows what your eye would see of that fixed picture through it, so the desktop stays put while the MacBook folds around it.</p>
+          </article>
+          <article>
+            <h3>Frost from the far edge</h3>
+            <p>Blur and darkness follow the picture's own height above the hinge. The top dissolves first, colour leaks past the edges, and a faint band of light crosses the glass mid-fold. Everything near the hinge stays readable to the end.</p>
+          </article>
+          <article>
+            <h3>One curve, both ways</h3>
+            <p>Nothing is a recorded animation. Every frame comes from the hinge angle, read a hundred times a second and smoothed with a spring. Stop halfway and it waits. Open again and it plays back through the same curve.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="looks" id="looks">
+      <div class="wrap">
+        <h2>Three looks, or your own</h2>
+        <p class="sub">Pick a style from the menu bar, or open Settings and drag the sliders while the screen folds under your cursor.</p>
+        <div class="cards">
+          <figure>
+            <img src="assets/look-duo.jpg" alt="The Duo style at mid-fold: the desktop tilted back, frosted and dim towards the top" width="1280" height="800" loading="lazy">
+            <figcaption><strong>Duo</strong> The reference look. Starts at 100°, full frost 60° later.</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/look-soft.jpg" alt="The Soft style at mid-fold: a gentler blur and less darkening" width="1280" height="800" loading="lazy">
+            <figcaption><strong>Soft</strong> Lighter frost, less darkness, a shallower lean.</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/look-cinematic.jpg" alt="The Cinematic style at mid-fold: a deeper lean and heavier frost" width="1280" height="800" loading="lazy">
+            <figcaption><strong>Cinematic</strong> Starts earlier, leans further, frosts harder.</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <section class="install" id="install">
+      <div class="wrap">
+        <h2 id="download">Install in a minute</h2>
+        <ol class="steps">
+          <li>
+            <h3>Download</h3>
+            <p><a class="button" id="dl" href="https://github.com/ninobc/mac-duo/releases/latest">Download Mac Duo</a></p>
+            <p class="meta">Version <span id="version">1.0.0</span> · DMG · Free under the MIT license</p>
+          </li>
+          <li>
+            <h3>Drag to Applications</h3>
+            <p>Open the disk image and drop Mac Duo into Applications, then open it. If macOS says it can't verify the developer, right-click the app and choose <em>Open</em>, or allow it under <em>System Settings › Privacy &amp; Security</em>.</p>
+          </li>
+          <li>
+            <h3>Allow Screen Recording</h3>
+            <p>Mac Duo asks once. macOS calls it Screen Recording; Mac Duo uses it to see the desktop for the second the lid is moving. Nothing is saved, nothing leaves the Mac.</p>
+          </li>
+        </ol>
+        <div class="requirements">
+          <h3>Works on MacBooks with a lid angle sensor</h3>
+          <ul>
+            <li>MacBook Pro 14-inch and 16-inch, 2021 and later (M1 Pro, M1 Max and newer)</li>
+            <li>MacBook Pro 16-inch, 2019</li>
+            <li>MacBook Air with M2 and later</li>
+          </ul>
+          <p class="meta">MacBook Air with M1 and the 13-inch MacBook Pro don't have the sensor. Mac Duo stays quiet on those and on desktop Macs. The fold only plays on the built-in display.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="faq" id="faq">
+      <div class="wrap">
+        <h2>Questions</h2>
+        <dl>
+          <dt>Does it record my screen?</dt>
+          <dd>No. Mac Duo starts a capture only when the lid is closing towards the fold angle, keeps frames on the GPU while the fold is on screen, and drops them the moment it ends. There are no files, no uploads, no accounts and no analytics. <a href="privacy.html">Read the privacy statement.</a></dd>
+          <dt>Will it slow my Mac down?</dt>
+          <dd>Not when the lid is still. Idle, the app reads a sensor a few times a second and nothing else. While folding, one Metal pass a frame does all the work, which an M-series chip does comfortably at the display's full refresh rate.</dd>
+          <dt>What happens when the Mac sleeps?</dt>
+          <dd>The fold ends when macOS puts the display to sleep near the end of the close. When you open the lid again, Mac Duo can bring the desktop back into focus from frost: turn "Bring the desktop into focus on wake" on in Settings.</dd>
+          <dt>Does it work with an external display?</dt>
+          <dd>The fold plays on the MacBook's own screen. External displays are left alone.</dd>
+          <dt>Is it affiliated with Apple?</dt>
+          <dd>No. Mac Duo is an independent project inspired by the iPhone Duo fold. iPhone, MacBook and macOS are trademarks of Apple Inc.</dd>
+          <dt>Can I read the code?</dt>
+          <dd>Yes. Mac Duo is Swift and Metal with no dependencies, MIT licensed, at <a href="https://github.com/ninobc/mac-duo" rel="noopener">github.com/ninobc/mac-duo</a>.</dd>
+        </dl>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <p>© 2026 Nino Bouchedid · <a href="privacy.html">Privacy</a> · <a href="https://github.com/ninobc/mac-duo" rel="noopener">Source</a> · <a href="mailto:hello@mac-duo.com">hello@mac-duo.com</a></p>
+      <p class="meta">Not affiliated with Apple Inc.</p>
+    </div>
+  </footer>
+
+  <script src="fold.js" defer></script>
+</body>
+</html>

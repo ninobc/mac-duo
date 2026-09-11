@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Pokes a running Mac Duo for QA: preview | scrub <angle> | release | reveal | angle
+set -euo pipefail
+case "${1:-}" in
+  preview) osascript -l JavaScript -e 'ObjC.import("Foundation"); $.NSDistributedNotificationCenter.defaultCenter.postNotificationNameObjectUserInfoDeliverImmediately("com.mac-duo.app.preview", null, null, true)' ;;
+  scrub)   osascript -l JavaScript -e "ObjC.import('Foundation'); \$.NSDistributedNotificationCenter.defaultCenter.postNotificationNameObjectUserInfoDeliverImmediately('com.mac-duo.app.scrub', '${2:?angle}', null, true)" ;;
+  release) osascript -l JavaScript -e 'ObjC.import("Foundation"); $.NSDistributedNotificationCenter.defaultCenter.postNotificationNameObjectUserInfoDeliverImmediately("com.mac-duo.app.scrub", null, null, true)' ;;
+  reveal)  osascript -l JavaScript -e 'ObjC.import("Foundation"); $.NSDistributedNotificationCenter.defaultCenter.postNotificationNameObjectUserInfoDeliverImmediately("com.mac-duo.app.reveal", null, null, true)' ;;
+  angle)   "$(dirname "$0")/../.build/debug/lidprobe" once ;;
+  log)     log show --predicate 'subsystem == "com.mac-duo.app"' --last "${2:-2m}" --info --style compact ;;
+  *) echo "usage: duoctl preview | scrub <angle> | release | reveal | angle | log [2m]" >&2; exit 1 ;;
+esac
