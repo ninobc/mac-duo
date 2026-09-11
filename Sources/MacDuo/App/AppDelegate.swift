@@ -14,6 +14,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.preferences = preferences
         let controller = FoldController(preferences: preferences)
         self.controller = controller
+        if UISnapshots.renderIfRequested(preferences: preferences, controller: controller) {
+            NSApp.terminate(nil)
+            return
+        }
         windows = WindowCoordinator(preferences: preferences, controller: controller)
         updates = UpdateCoordinator(preferences: preferences)
         statusItem = StatusItemController(preferences: preferences, controller: controller, windows: windows, updates: updates)
@@ -24,6 +28,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         updates.checkOnLaunchIfDue()
         Log.app.notice("launched \(AppInfo.version, privacy: .public) (\(AppInfo.build, privacy: .public))")
+        FileLog.write("app", "launched \(AppInfo.version) (\(AppInfo.build)), sensor \(controller.sensorAvailable), screen recording \(ScreenRecordingPermission.isGranted), model \(MacModel.identifier)")
     }
 
     func applicationWillTerminate(_ notification: Notification) {

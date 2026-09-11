@@ -48,6 +48,8 @@ final class FoldController {
     @ObservationIgnored private var scrubAngle: Double?
     @ObservationIgnored private var reveal: Reveal?
     @ObservationIgnored private var activationTime: CFTimeInterval = 0
+    @ObservationIgnored private var permissionTimer: Timer?
+    @ObservationIgnored private var lastPermission = ScreenRecordingPermission.isGranted
 
     /// The focus-on-wake timeline: the frosted desktop comes into focus.
     private struct Reveal {
@@ -71,11 +73,17 @@ final class FoldController {
 
     // MARK: Lifecycle
 
+    /// Only answers whether the sensor exists, for windows shown before `start()`.
+    func probeSensor() {
+        sensorAvailable = monitor.isAvailable
+    }
+
     func start() {
         sensorAvailable = monitor.isAvailable
         Log.app.notice("start: sensor \(self.sensorAvailable), screen recording \(ScreenRecordingPermission.isGranted), model \(MacModel.identifier, privacy: .public)")
         overlay.warmUp()
         observeSystem()
+        watchPermission()
         guard sensorAvailable else { return }
         monitor.onSample = { [weak self] tracker, time in self?.handle(tracker: tracker, at: time) }
         monitor.onFailure = { [weak self] in self?.endFold() }
@@ -103,7 +111,10 @@ final class FoldController {
     /// Plays one close-and-open without the lid moving.
     func preview() {
         guard reveal == nil, !isActive || isPreviewing else { return }
-        guard ScreenRecordingPermission.isGranted else { return }
+        guard ScreenRecordingPermission.isGranted else {
+            FileLog.write("fold", "preview refused: Screen Recording is not granted")
+            return
+        }
         let effect = preferences.effect
         let sweep = ScriptedSweep(
             startedAt: CACurrentMediaTime() + 0.05,
@@ -115,6 +126,7 @@ final class FoldController {
         monitor.setRate(.moving)
         decider.forceIdle()
         Log.fold.notice("preview sweep \(sweep.open, format: .fixed(precision: 0))° → \(sweep.shut, format: .fixed(precision: 0))°")
+        FileLog.write("fold", String(format: "preview sweep %.0f° → %.0f°", sweep.open, sweep.shut))
     }
 
     /// Holds the fold at one angle while a slider is being dragged.
@@ -238,6 +250,7 @@ final class FoldController {
     private func beginFold(at time: CFTimeInterval, snapping: Bool) {
         guard ScreenRecordingPermission.isGranted else {
             Log.fold.notice("fold wanted but screen recording is not granted")
+            FileLog.write("fold", "wanted, but Screen Recording is not granted")
             decider.forceIdle()
             return
         }
@@ -247,6 +260,7 @@ final class FoldController {
         snapshotTimer?.invalidate()
         snapshotTimer = nil
         Log.fold.notice("fold begins at \(self.monitor.tracker.angle, format: .fixed(precision: 1))°, velocity \(self.monitor.tracker.velocity, format: .fixed(precision: 0))°/s")
+        FileLog.write("fold", String(format: "begins at %.1f°, velocity %.0f°/s, live %d", monitor.tracker.angle, monitor.tracker.velocity, preferences.effect.livePicture ? 1 : 0))
         present()
     }
 
@@ -254,6 +268,7 @@ final class FoldController {
         guard isActive else { return }
         isActive = false
         Log.fold.notice("fold ends at \(self.monitor.tracker.angle, format: .fixed(precision: 1))°")
+        FileLog.write("fold", String(format: "ends at %.1f°", monitor.tracker.angle))
         stopDisplayLink()
         overlay.dismiss(animated: true)
         snapshot.discard()
@@ -366,6 +381,31 @@ final class FoldController {
             self.reveal = Reveal(startedAt: CACurrentMediaTime() + 0.05)
             self.overlay.showStill(image, on: screen) { [weak self] in self?.startDisplayLink() }
             Log.fold.notice("focus-on-wake reveal")
+            FileLog.write("fold", "focus-on-wake reveal")
+        }
+    }
+
+    /// Screen Recording can be granted while the app runs; notice it, log it,
+    /// and get the capture filters ready.
+    private func watchPermission() {
+        let timer = Timer(timeInterval: 2, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.checkPermission() }
+        }
+        timer.tolerance = 1
+        RunLoop.main.add(timer, forMode: .common)
+        permissionTimer = timer
+    }
+
+    private func checkPermission() {
+        let granted = ScreenRecordingPermission.isGranted
+        guard granted != lastPermission else { return }
+        lastPermission = granted
+        FileLog.write("app", "screen recording \(granted ? "granted" : "revoked")")
+        if granted {
+            Task {
+                await snapshot.warm()
+                await stream.warm()
+            }
         }
     }
 
@@ -432,6 +472,7 @@ final class FoldController {
         guard !isSuspended else { return }
         isSuspended = true
         Log.app.notice("suspend")
+        FileLog.write("app", "suspend")
         reveal = nil
         stopDisplayLink()
         overlay.dismiss(animated: false)
@@ -448,6 +489,7 @@ final class FoldController {
         guard isSuspended else { return }
         isSuspended = false
         Log.app.notice("resume, locked \(self.isScreenLocked)")
+        FileLog.write("app", "resume, screen locked \(isScreenLocked)")
         monitor.resetBaseline()
         monitor.setRate(.resting)
         if !isScreenLocked { scheduleReveal() }

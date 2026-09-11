@@ -146,8 +146,10 @@ final class ScreenStream {
             self.receiver = receiver
             self.stream = fresh
             Log.capture.notice("stream started \(configuration.width)x\(configuration.height) in \((CACurrentMediaTime() - started) * 1000, format: .fixed(precision: 0)) ms")
+            FileLog.write("capture", String(format: "stream started %dx%d in %.0f ms", configuration.width, configuration.height, (CACurrentMediaTime() - started) * 1000))
         } catch {
             Log.capture.error("stream failed: \(String(describing: error), privacy: .public)")
+            FileLog.write("capture", "stream failed: \(error)")
             invalidateFilter()
             isRunning = false
         }

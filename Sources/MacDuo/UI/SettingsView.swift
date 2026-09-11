@@ -233,9 +233,9 @@ private struct AdvancedSettings: View {
                             copied = false
                         }
                     }
-                    Button("Open Log in Terminal") { openLog() }
+                    Button("Show Log File") { NSWorkspace.shared.activateFileViewerSelecting([FileLog.url]) }
                 }
-                Text("Logs stay on this Mac. `log show --predicate 'subsystem == \"\(Log.subsystem)\"' --last 10m`")
+                Text("Logs stay on this Mac, in ~/Library/Logs/Mac Duo.")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
             }
@@ -264,9 +264,4 @@ private struct AdvancedSettings: View {
         }
     }
 
-    private func openLog() {
-        let script = "log show --predicate 'subsystem == \"\(Log.subsystem)\"' --last 10m --info"
-        let source = "tell application \"Terminal\" to do script \"\(script)\"\ntell application \"Terminal\" to activate"
-        NSAppleScript(source: source)?.executeAndReturnError(nil)
-    }
 }

@@ -6,8 +6,15 @@ struct OnboardingView: View {
     let controller: FoldController
     let finish: () -> Void
 
-    private enum Step: Int { case welcome, permission, ready, unsupported }
-    @State private var step: Step = .welcome
+    enum Step: Int { case welcome, permission, ready, unsupported }
+    @State private var step: Step
+    /// The step to open on. Only QA snapshots pass one.
+    init(preferences: Preferences, controller: FoldController, finish: @escaping () -> Void, initialStep: Step = .welcome) {
+        self.preferences = preferences
+        self.controller = controller
+        self.finish = finish
+        _step = State(initialValue: initialStep)
+    }
     @State private var granted = ScreenRecordingPermission.isGranted
     @State private var launchesAtLogin = LaunchAtLogin.isEnabled
     @State private var asked = false
@@ -29,7 +36,7 @@ struct OnboardingView: View {
         .frame(width: 560, height: 520)
         .animation(.easeInOut(duration: 0.3), value: step)
         .onAppear {
-            if !controller.sensorAvailable { step = .unsupported }
+            if !controller.sensorAvailable, step == .welcome { step = .unsupported }
         }
         .task {
             while !Task.isCancelled {
@@ -197,13 +204,14 @@ private struct OnboardingBackdrop: View {
     var body: some View {
         LinearGradient(
             colors: [
-                Color(hue: 0.68 - 0.06 * progress, saturation: 0.35, brightness: 0.16 + 0.06 * progress),
-                Color(hue: 0.06, saturation: 0.30 + 0.25 * progress, brightness: 0.30 + 0.35 * progress),
+                Color(hue: 0.68 - 0.06 * progress, saturation: 0.55, brightness: 0.22 + 0.08 * progress),
+                Color(hue: 0.72, saturation: 0.35, brightness: 0.40 + 0.10 * progress),
+                Color(hue: 0.06, saturation: 0.45 + 0.25 * progress, brightness: 0.55 + 0.35 * progress),
             ],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
+            startPoint: .top,
+            endPoint: .bottom
         )
-        .overlay(.thinMaterial.opacity(0.85))
+        .overlay(.thinMaterial.opacity(0.55))
         .ignoresSafeArea()
         .animation(.easeInOut(duration: 0.5), value: progress)
     }

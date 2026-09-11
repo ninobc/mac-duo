@@ -61,6 +61,7 @@ final class ScreenSnapshot {
             return captured
         } catch {
             Log.capture.error("snapshot failed: \(String(describing: error), privacy: .public)")
+            FileLog.write("capture", "snapshot failed: \(error)")
             invalidateFilter()
             return nil
         }
