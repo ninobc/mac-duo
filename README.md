@@ -60,7 +60,7 @@ Scripts/duoctl log 5m           # the app's log
 SIGN_IDENTITY="Developer ID Application: …" NOTARY_PROFILE=macduo Scripts/release.sh 1.0.0
 ```
 
-Builds universal, signs, packages `dist/Mac-Duo-1.0.0.dmg` and `.zip`, notarizes when a profile is given, and writes `site/updates.json`, which the app polls once a day. Tagging `v1.0.0` runs the same in GitHub Actions and publishes a release; pushes to `site/` deploy mac-duo.com through GitHub Pages.
+Builds universal, signs, packages `dist/Mac-Duo-1.0.0.dmg` and `.zip`, and notarizes when a profile is given. Tagging `v1.0.0` runs the same in GitHub Actions and publishes a release. The website lives in its own repository, [mac-duo-site](https://github.com/ninobc/mac-duo-site); its `public/updates.json` is the feed the app polls once a day.
 
 ## How the fold is built
 

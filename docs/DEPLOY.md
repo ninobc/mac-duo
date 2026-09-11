@@ -1,12 +1,12 @@
 # Deploying mac-duo.com
 
-The site is static (`site/`) and deploys to GitHub Pages from the `Site` workflow on every push to `main` that touches `site/`.
+The site lives in its own repository, `mac-duo-site` (Vite + Three.js), and deploys to GitHub Pages on every push to its `main`.
 
 ## One-time setup
 
-1. Create the repository `ninobc/mac-duo` on GitHub and push `main`.
-2. In the repository, open **Settings › Pages** and set **Source** to *GitHub Actions*.
-3. Under **Custom domain**, enter `mac-duo.com` and tick *Enforce HTTPS* once the certificate is issued (a few minutes after DNS resolves). `site/CNAME` already contains the domain.
+1. Create the repositories `ninobc/mac-duo` (the app) and `ninobc/mac-duo-site` (the website) on GitHub and push both `main` branches.
+2. In `mac-duo-site`, open **Settings › Pages** and set **Source** to *GitHub Actions*.
+3. Under **Custom domain**, enter `mac-duo.com` and tick *Enforce HTTPS* once the certificate is issued (a few minutes after DNS resolves). `public/CNAME` already contains the domain.
 4. At GoDaddy (the current DNS host), set:
 
    | Type | Name | Value |
@@ -27,7 +27,7 @@ Tag a version to build, package and publish it:
 git tag v1.0.0 && git push origin v1.0.0
 ```
 
-The `Release` workflow builds a universal binary, signs and notarizes it when the `APPLE_*` secrets exist (see `.github/workflows/release.yml`), and attaches the DMG, ZIP and checksums to a GitHub release. The download button on the site points at the latest release. After publishing, update `site/updates.json` (the `Scripts/release.sh` script writes it) so installed copies learn about the new version.
+The `Release` workflow builds a universal binary, signs and notarizes it when the `APPLE_*` secrets exist (see `.github/workflows/release.yml`), and attaches the DMG, ZIP and checksums to a GitHub release. The download button on the site points at the latest release. After publishing, commit the `public/updates.json` that `Scripts/release.sh` writes into the site repository so installed copies learn about the new version.
 
 ## Signing
 

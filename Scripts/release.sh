@@ -11,11 +11,15 @@ export APP_VERSION="$VERSION" BUILD_NUMBER
 Scripts/make-icon.sh
 Scripts/build.sh --universal
 Scripts/package-dmg.sh
-cat > site/updates.json <<JSON
+SITE="${SITE_DIR:-../mac-duo-site}"
+if [ -d "$SITE/public" ]; then
+cat > "$SITE/public/updates.json" <<JSON
 {
   "version": "$VERSION",
-  "url": "https://mac-duo.com/#download",
+  "url": "https://mac-duo.com/#install",
   "notes": "Mac Duo $VERSION is available. Download it from mac-duo.com."
 }
 JSON
-echo "release $VERSION ready in dist/; site/updates.json updated"
+echo "updated $SITE/public/updates.json"
+fi
+echo "release $VERSION ready in dist/"
