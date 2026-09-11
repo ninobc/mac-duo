@@ -5,6 +5,7 @@ case "${1:-}" in
   preview) osascript -l JavaScript -e 'ObjC.import("Foundation"); $.NSDistributedNotificationCenter.defaultCenter.postNotificationNameObjectUserInfoDeliverImmediately("com.mac-duo.app.preview", null, null, true)' ;;
   scrub)   osascript -l JavaScript -e "ObjC.import('Foundation'); \$.NSDistributedNotificationCenter.defaultCenter.postNotificationNameObjectUserInfoDeliverImmediately('com.mac-duo.app.scrub', '${2:?angle}', null, true)" ;;
   release) osascript -l JavaScript -e 'ObjC.import("Foundation"); $.NSDistributedNotificationCenter.defaultCenter.postNotificationNameObjectUserInfoDeliverImmediately("com.mac-duo.app.scrub", null, null, true)' ;;
+  updates) osascript -l JavaScript -e 'ObjC.import("Foundation"); $.NSDistributedNotificationCenter.defaultCenter.postNotificationNameObjectUserInfoDeliverImmediately("com.mac-duo.app.checkUpdates", null, null, true)' ;;
   reveal)  osascript -l JavaScript -e 'ObjC.import("Foundation"); $.NSDistributedNotificationCenter.defaultCenter.postNotificationNameObjectUserInfoDeliverImmediately("com.mac-duo.app.reveal", null, null, true)' ;;
   angle)   "$(dirname "$0")/../.build/debug/lidprobe" once ;;
   log)     log show --predicate 'subsystem == "com.mac-duo.app"' --last "${2:-2m}" --info --style compact ;;

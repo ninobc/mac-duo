@@ -51,5 +51,8 @@ if [ -n "${NOTARY_PROFILE:-}" ]; then
 fi
 
 ditto -c -k --sequesterRsrc --keepParent "$APP" "$ZIP"
+# Version-less copies, so /releases/latest/download/Mac-Duo.dmg always works.
+cp "$DMG" dist/Mac-Duo.dmg
+cp "$ZIP" dist/Mac-Duo.zip
 shasum -a 256 "$DMG" "$ZIP" | tee dist/SHA256SUMS.txt
 echo "packaged $DMG and $ZIP"

@@ -27,8 +27,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             windows.showOnboarding()
         }
         updates.checkOnLaunchIfDue()
+        DistributedNotificationCenter.default().addObserver(forName: Notification.Name("com.mac-duo.app.checkUpdates"), object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.checkUpdatesNow() }
+        }
         Log.app.notice("launched \(AppInfo.version, privacy: .public) (\(AppInfo.build, privacy: .public))")
         FileLog.write("app", "launched \(AppInfo.version) (\(AppInfo.build)), sensor \(controller.sensorAvailable), screen recording \(ScreenRecordingPermission.isGranted), model \(MacModel.identifier)")
+    }
+
+    private func checkUpdatesNow() {
+        Task { await updates.check(interactive: true) }
     }
 
     func applicationWillTerminate(_ notification: Notification) {

@@ -8,6 +8,7 @@ final class UpdateCoordinator {
 
     private(set) var available: UpdateInfo?
     private(set) var isChecking = false
+    private(set) var isDownloading = false
 
     @ObservationIgnored private let preferences: Preferences
     @ObservationIgnored private let checker = UpdateChecker()
@@ -45,18 +46,49 @@ final class UpdateCoordinator {
         NSApp.activate()
         let alert = NSAlert()
         alert.messageText = "\(AppInfo.name) \(info.version) is available"
-        alert.informativeText = info.notes ?? "You have \(AppInfo.version). Download the new version from mac-duo.com."
-        alert.addButton(withTitle: "Download")
+        var text = "You have \(AppInfo.version)."
+        if let notes = info.notes, !notes.isEmpty { text += "\n\n" + notes.prefix(600) }
+        alert.informativeText = text
+        alert.addButton(withTitle: "Download and Open")
         alert.addButton(withTitle: "Later")
         alert.addButton(withTitle: "Skip This Version")
         switch alert.runModal() {
         case .alertFirstButtonReturn:
-            NSWorkspace.shared.open(info.url)
+            Task { await download(info) }
         case .alertThirdButtonReturn:
             preferences.skippedUpdateVersion = info.version
             available = nil
         default:
             break
+        }
+    }
+
+    /// Fetches the disk image into Downloads and opens it, so the new copy
+    /// is one drag away. Anything that is not a DMG just opens in the browser.
+    private func download(_ info: UpdateInfo) async {
+        guard info.url.pathExtension.lowercased() == "dmg" else {
+            NSWorkspace.shared.open(info.url)
+            return
+        }
+        isDownloading = true
+        defer { isDownloading = false }
+        do {
+            var request = URLRequest(url: info.url)
+            request.setValue("\(AppInfo.name)/\(AppInfo.version)", forHTTPHeaderField: "User-Agent")
+            let (temporary, response) = try await URLSession.shared.download(for: request)
+            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+                throw URLError(.badServerResponse)
+            }
+            let downloads = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask)[0]
+            let destination = downloads.appendingPathComponent("Mac-Duo-\(info.version).dmg")
+            try? FileManager.default.removeItem(at: destination)
+            try FileManager.default.moveItem(at: temporary, to: destination)
+            FileLog.write("app", "downloaded update \(info.version) to \(destination.path)")
+            NSWorkspace.shared.open(destination)
+        } catch {
+            FileLog.write("app", "update download failed: \(error)")
+            tell("Couldn't download the update", "Opening the download page instead.")
+            NSWorkspace.shared.open(AppInfo.downloadPage)
         }
     }
 
