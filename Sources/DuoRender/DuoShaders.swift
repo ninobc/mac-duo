@@ -20,7 +20,8 @@ public enum DuoShaders {
         float4 paddedAndBlur;    // padded size (pt), max radius (px), blur strength
         float4 shape;            // blur floor, max dim, pixel scale, max mip level
         float4 light;            // dim start, dim strength, visible top, sheen amount
-        float4 extra;            // sheen position, grain, time, unused
+        float4 extra;            // sheen position, grain, time, dim reach
+        float4 more;             // dim floor at the hinge, unused
     };
 
     // Fills the padded picture from a frame: inside, the frame itself; in the
@@ -68,6 +69,8 @@ public enum DuoShaders {
         const float  sheenPos     = u.extra.x;
         const float  grain        = u.extra.y;
         const float  time         = u.extra.z;
+        const float  dimReach     = u.extra.w;
+        const float  dimHinge     = u.more.x;
 
         // Fragments are pixels with y down; the geometry is points with y up.
         float2 screenPoint = float2(position.x / pixelScale, screenSize.y - position.y / pixelScale);
@@ -122,10 +125,11 @@ public enum DuoShaders {
         colour *= mix(1.0, 0.45, smoothstep(0.0, glowReach * 2.5, outside));
 
         // Dimming, in linear light so the far edge fades into the dark
-        // rather than going grey. Full black only at the very top.
-        float spread = clamp((g - dimStart) / max(1.0 - dimStart, 0.05), 0.0, 1.0);
-        float dim = dimStrength * pow(spread, 1.9) * maxDim;
-        colour *= pow(1.0 - dim, 1.6);
+        // rather than going grey. It reaches full strength at `dimReach`;
+        // the hinge sinks a little too, so the whole picture recedes.
+        float spread = smoothstep(dimStart, max(dimReach, dimStart + 0.05), g);
+        float dim = dimStrength * (dimHinge + (1.0 - dimHinge) * spread) * maxDim;
+        colour *= pow(1.0 - dim, 2.0);
 
         // Sheen: a soft band of light crossing the frost, tinted by the
         // picture's own average colour (the top of the pyramid).

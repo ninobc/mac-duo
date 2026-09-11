@@ -22,6 +22,8 @@ public struct FrameParameters {
     public var sheenPosition: Double
     public var grain: Double
     public var time: Double
+    public var dimReach: Double = 0.55
+    public var dimHingeFloor: Double = 0.2
 
     public init(corners: [ScreenPoint], blurStrength: Double, dimStrength: Double, blurFloor: Double, maxDim: Double,
                 dimStart: Double, maxBlurRadius: Double, visibleTop: Double, sheenAmount: Double, sheenPosition: Double,
@@ -44,7 +46,7 @@ public struct FrameParameters {
             corners = [ScreenPoint(x: 0, y: 0), ScreenPoint(x: width, y: 0), ScreenPoint(x: width, y: height), ScreenPoint(x: 0, y: height)]
         } else {
             let geometry = FoldGeometry(screenWidth: width, screenHeight: height, startAngle: effect.startAngle,
-                                        eyeDistance: effect.eyeDistance, depth: effect.depth)
+                                        eyeDistance: effect.eyeDistance, eyeHeight: effect.eyeHeight, depth: effect.depth)
             corners = geometry.corners(at: angle)
         }
         // How much of the picture the glass still shows at its top edge.
@@ -53,7 +55,7 @@ public struct FrameParameters {
         let visibleTop = min(max(topCentre.y / max(height, 1), 0.2), 1)
         // The sheen swells in the middle of the fold and crosses the frost.
         let envelope = 4 * progress * (1 - progress)
-        return FrameParameters(
+        var parameters = FrameParameters(
             corners: corners,
             blurStrength: curve.blurStrength(progress: progress),
             dimStrength: curve.dimStrength(progress: progress),
@@ -67,6 +69,9 @@ public struct FrameParameters {
             grain: effect.grain,
             time: time
         )
+        parameters.dimReach = effect.dimReach
+        parameters.dimHingeFloor = effect.dimHingeFloor
+        return parameters
     }
 }
 
@@ -88,6 +93,7 @@ public final class DuoRenderer {
         var shape: SIMD4<Float>
         var light: SIMD4<Float>
         var extra: SIMD4<Float>
+        var more: SIMD4<Float>
     }
 
     public struct Picture {
@@ -400,7 +406,8 @@ public final class DuoRenderer {
             paddedAndBlur: SIMD4(Float(paddedSize.width), Float(paddedSize.height), Float(p.maxBlurRadius * Double(pixelScale)), Float(p.blurStrength)),
             shape: SIMD4(Float(p.blurFloor), Float(p.maxDim), Float(pixelScale), maxLevel),
             light: SIMD4(Float(p.dimStart), Float(p.dimStrength), Float(p.visibleTop), Float(p.sheenAmount)),
-            extra: SIMD4(Float(p.sheenPosition), Float(p.grain), Float(p.time.truncatingRemainder(dividingBy: 1000)), 0)
+            extra: SIMD4(Float(p.sheenPosition), Float(p.grain), Float(p.time.truncatingRemainder(dividingBy: 1000)), Float(p.dimReach)),
+            more: SIMD4(Float(p.dimHingeFloor), 0, 0, 0)
         )
         let pass = MTLRenderPassDescriptor()
         pass.colorAttachments[0].texture = target

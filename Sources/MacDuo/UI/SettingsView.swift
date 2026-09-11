@@ -146,6 +146,8 @@ private struct EffectSettingsPane: View {
                     help: "Blur at the far edge when fully folded.")
                 row("Darkness", value: $preferences.effect.dimming, in: 0...1, step: 0.05, format: "%.0f%%", scale: 100,
                     help: "How dark the far edge goes.")
+                row("Darkness reaches", value: $preferences.effect.dimReach, in: 0.2...1, step: 0.05, format: "%.0f%% height", scale: 100,
+                    help: "Everything above this height goes fully dark at full fold.")
                 row("Sheen", value: $preferences.effect.sheen, in: 0...1, step: 0.05, format: "%.0f%%", scale: 100,
                     help: "A soft light that crosses the glass mid-fold.")
             }
@@ -213,6 +215,8 @@ private struct AdvancedSettings: View {
             Section("Fine tuning") {
                 slider("Frost at the hinge", value: $preferences.effect.blurFloor, in: 0...0.5, format: "%.0f%%", scale: 100)
                 slider("Darkness begins at", value: $preferences.effect.dimStart, in: 0...0.6, format: "%.0f%% height", scale: 100)
+                slider("Darkness at the hinge", value: $preferences.effect.dimHingeFloor, in: 0...0.5, format: "%.0f%%", scale: 100)
+                slider("Eye height", value: $preferences.effect.eyeHeight, in: -0.3...0.5, format: "%.2f screens", scale: 1)
                 slider("Grain", value: $preferences.effect.grain, in: 0...1, format: "%.0f%%", scale: 100)
             }
             Section("Sensor") {
