@@ -32,6 +32,18 @@ enum UISnapshots {
         snapshot(OnboardingView(preferences: preferences, controller: controller, finish: {}, initialStep: .unsupported),
                  size: NSSize(width: 560, height: 520), to: directory.appendingPathComponent("onboarding-unsupported.png"))
 
+        // The menu's slider rows, stacked as they appear in the dropdown.
+        let stack = NSStackView(views: [
+            MenuSliderRow(title: "Starts at", value: 100, range: 40...125, step: 1, format: { String(format: "%.0f°", $0) }, onChange: { _ in }),
+            MenuSliderRow(title: "Frost", value: 72, range: 16...180, step: 2, format: { String(format: "%.0f pt", $0) }, onChange: { _ in }),
+            MenuSliderRow(title: "Darkness", value: 1, range: 0...1, step: 0.05, format: { String(format: "%.0f%%", $0 * 100) }, onChange: { _ in }),
+        ])
+        stack.orientation = .vertical
+        stack.spacing = 0
+        stack.frame = NSRect(x: 0, y: 0, width: 260, height: 138)
+        for view in stack.arrangedSubviews { view.widthAnchor.constraint(equalToConstant: 260).isActive = true }
+        snapshotView(stack, to: directory.appendingPathComponent("menu-sliders.png"))
+
         // The menu bar glyph at a few angles, enlarged.
         for angle in [108.0, 80.0, 50.0] {
             let image = MenuBarGlyph.image(angle: angle, active: angle < 100)
@@ -57,6 +69,21 @@ enum UISnapshots {
         if let data = rep.representation(using: .png, properties: [:]) {
             try? data.write(to: url)
         }
+        window.orderOut(nil)
+        window.close()
+    }
+
+    private static func snapshotView(_ view: NSView, to url: URL) {
+        let window = NSWindow(contentRect: view.frame, styleMask: [.borderless], backing: .buffered, defer: false)
+        window.contentView = view
+        window.appearance = NSAppearance(named: .aqua)
+        window.setFrameOrigin(NSPoint(x: -10_000, y: -10_000))
+        window.orderBack(nil)
+        view.layoutSubtreeIfNeeded()
+        for _ in 0..<2 { RunLoop.main.run(until: Date().addingTimeInterval(0.05)) }
+        guard let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { return }
+        view.cacheDisplay(in: view.bounds, to: rep)
+        try? rep.representation(using: .png, properties: [:])?.write(to: url)
         window.orderOut(nil)
         window.close()
     }

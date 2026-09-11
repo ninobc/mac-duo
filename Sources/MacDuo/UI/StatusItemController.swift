@@ -20,6 +20,13 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     private let styleMenu = NSMenu(title: "Style")
     private let updateItem = NSMenuItem(title: "Check for Updates…", action: #selector(checkForUpdates), keyEquivalent: "")
     private let permissionItem = NSMenuItem(title: "Allow Screen Recording…", action: #selector(openPermission), keyEquivalent: "")
+    private let liveItem = NSMenuItem(title: "Live Picture", action: #selector(toggleLive), keyEquivalent: "")
+    private let wakeItem = NSMenuItem(title: "Focus on Wake", action: #selector(toggleWake), keyEquivalent: "")
+    private let angleItem = NSMenuItem(title: "Show Angle in Menu Bar", action: #selector(toggleAngle), keyEquivalent: "")
+    private let loginItem = NSMenuItem(title: "Launch at Login", action: #selector(toggleLogin), keyEquivalent: "")
+    private var startRow: MenuSliderRow!
+    private var frostRow: MenuSliderRow!
+    private var darkRow: MenuSliderRow!
 
     init(preferences: Preferences, controller: FoldController, windows: WindowCoordinator, updates: UpdateCoordinator) {
         self.preferences = preferences
@@ -69,9 +76,34 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         style.submenu = styleMenu
         menu.addItem(style)
 
+        // The three knobs people reach for most, right in the menu.
+        startRow = MenuSliderRow(title: "Starts at", value: preferences.effect.startAngle, range: 40...125, step: 1,
+                                 format: { String(format: "%.0f°", $0) }) { [weak self] value in
+            self?.preferences.effect.startAngle = value
+        }
+        frostRow = MenuSliderRow(title: "Frost", value: preferences.effect.blurRadius, range: 16...180, step: 2,
+                                 format: { String(format: "%.0f pt", $0) }) { [weak self] value in
+            self?.preferences.effect.blurRadius = value
+        }
+        darkRow = MenuSliderRow(title: "Darkness", value: preferences.effect.dimming, range: 0...1, step: 0.05,
+                                format: { String(format: "%.0f%%", $0 * 100) }) { [weak self] value in
+            self?.preferences.effect.dimming = value
+        }
+        for row in [startRow!, frostRow!, darkRow!] {
+            let item = NSMenuItem()
+            item.view = row
+            menu.addItem(item)
+        }
+        menu.addItem(.separator())
+
+        for item in [liveItem, wakeItem, angleItem, loginItem] {
+            item.target = self
+            menu.addItem(item)
+        }
+        menu.addItem(.separator())
+
         permissionItem.target = self
         menu.addItem(permissionItem)
-        menu.addItem(.separator())
 
         let settings = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
         settings.target = self
@@ -102,6 +134,14 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         }
         enableItem.state = preferences.isEnabled ? .on : .off
         enableItem.isEnabled = status != .noSensor
+        startRow.set(value: preferences.effect.startAngle)
+        frostRow.set(value: preferences.effect.blurRadius)
+        darkRow.set(value: preferences.effect.dimming)
+        liveItem.state = preferences.effect.livePicture ? .on : .off
+        wakeItem.state = preferences.focusOnWake ? .on : .off
+        angleItem.state = preferences.showsAngleInMenuBar ? .on : .off
+        loginItem.state = LaunchAtLogin.isEnabled ? .on : .off
+        for item in [liveItem, wakeItem, angleItem] { item.isEnabled = status != .noSensor }
         previewItem.isEnabled = status == .ready || status == .off
         permissionItem.isHidden = status != .needsPermission
         let current = preferences.preset
@@ -147,6 +187,11 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         guard let raw = sender.representedObject as? String, let preset = EffectPreset(rawValue: raw) else { return }
         preferences.apply(preset)
     }
+
+    @objc private func toggleLive() { preferences.effect.livePicture.toggle() }
+    @objc private func toggleWake() { preferences.focusOnWake.toggle() }
+    @objc private func toggleAngle() { preferences.showsAngleInMenuBar.toggle() }
+    @objc private func toggleLogin() { LaunchAtLogin.set(!LaunchAtLogin.isEnabled) }
 
     @objc private func openEffectSettings() {
         windows.showSettings(tab: .effect)

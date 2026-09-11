@@ -3,7 +3,13 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 mkdir -p build/icon
-swift Scripts/icon/MakeIcon.swift build/icon/AppIcon-1024.png
+if [ -f Resources/IconArt/macbook-render.png ]; then
+  # The rendered artwork, fitted to the macOS icon grid.
+  swift Scripts/icon/MaskIcon.swift Resources/IconArt/macbook-render.png build/icon/AppIcon-1024.png
+else
+  # Procedural fallback.
+  swift Scripts/icon/MakeIcon.swift build/icon/AppIcon-1024.png
+fi
 ICONSET=build/icon/AppIcon.iconset
 rm -rf "$ICONSET"; mkdir -p "$ICONSET"
 for s in 16 32 128 256 512; do
