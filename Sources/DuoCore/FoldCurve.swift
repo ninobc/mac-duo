@@ -19,11 +19,11 @@ public struct FoldCurve: Sendable {
         self.span = max(span, 1)
     }
 
-    /// 0 at the start angle, 1 at full strength, eased so the sensor's steps
-    /// never show as a visible kick at either end.
+    /// 0 at the start angle, 1 at full strength, linear in the lid angle.
+    /// The exponents on blur and dimming shape the feel from there.
     public func progress(at angle: Double) -> Double {
         let raw = (startAngle - angle) / span
-        return Self.smoothstep(min(max(raw, 0), 1))
+        return min(max(raw, 0), 1)
     }
 
     public func blurStrength(progress: Double) -> Double {
