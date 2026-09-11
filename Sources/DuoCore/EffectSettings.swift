@@ -5,11 +5,11 @@ import Foundation
 public struct EffectSettings: Codable, Equatable, Sendable {
 
     /// The fold starts at this angle.
-    public var startAngle: Double = 90
+    public var startAngle: Double = 92
     /// Degrees of further closing to reach full strength.
-    public var span: Double = 60
+    public var span: Double = 58
     /// Blur radius at the far edge at full strength, in points.
-    public var blurRadius: Double = 135
+    public var blurRadius: Double = 125
     /// Blur at the hinge as a fraction of the far edge. 0 keeps the hinge sharp.
     public var blurFloor: Double = 0.0
     /// How dark the far edge goes, 0…1.
@@ -18,16 +18,16 @@ public struct EffectSettings: Codable, Equatable, Sendable {
     public var dimStart: Double = 0.0
     /// Height where the dimming reaches full strength. Above it, at full fold,
     /// the picture is dark.
-    public var dimReach: Double = 0.5
+    public var dimReach: Double = 0.55
     /// Dimming at the hinge as a fraction of the far edge, so the whole
     /// picture sinks a little as it folds.
-    public var dimHingeFloor: Double = 0.2
+    public var dimHingeFloor: Double = 0.18
     /// Eye height above the screen centre, in screen heights.
     public var eyeHeight: Double = 0.0
     /// How much the picture stays fixed in the room. 1 is physically right.
     public var depth: Double = 1
     /// Eye distance in screen heights. Closer means stronger perspective.
-    public var eyeDistance: Double = 6.0
+    public var eyeDistance: Double = 5.5
     /// The travelling highlight on the frosted glass.
     public var sheen: Double = 0
     /// Fine grain that hides banding in the dark gradient.

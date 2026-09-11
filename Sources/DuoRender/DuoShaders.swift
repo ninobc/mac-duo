@@ -127,7 +127,7 @@ public enum DuoShaders {
         // the hinge sinks a little too, so the whole picture recedes.
         float spread = smoothstep(dimStart, max(dimReach, dimStart + 0.05), g);
         float dim = dimStrength * (dimHinge + (1.0 - dimHinge) * spread) * maxDim;
-        colour *= pow(1.0 - dim, 2.2) * recede;
+        colour *= pow(1.0 - dim, 2.1) * recede;
         colour *= exp(-pow(above / max(0.22 * screenSize.y, 1.0), 1.4));
 
         // Sheen: a soft band of light crossing the frost, tinted by the

@@ -11,8 +11,8 @@ public struct FoldCurve: Sendable {
     public var span: Double
 
     /// Exponents on the progress. Above 1 starts gently.
-    public var blurExponent: Double = 1.6
-    public var dimExponent: Double = 0.7
+    public var blurExponent: Double = 1.55
+    public var dimExponent: Double = 0.75
 
     public init(startAngle: Double, span: Double) {
         self.startAngle = startAngle
