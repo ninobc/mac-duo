@@ -55,13 +55,16 @@ public struct FoldGeometry: Sendable {
         self.depth = depth
     }
 
-    /// Where the four corners of the frozen picture land on the glass when the
-    /// lid is at `angle`. Order: bottom-left, bottom-right, top-right, top-left.
+    /// Where the frozen picture lands on the glass when the lid is at `angle`.
+    /// Order: bottom-left, bottom-right, top-right, top-left.
     ///
     /// At `angle == startAngle` this is exactly the screen rectangle. As the
     /// lid folds towards the eye the glass covers less of the room, so the
-    /// picture's far edge climbs past the top of the glass and its sides draw
-    /// in: the picture holds still and the glass slides down over it.
+    /// picture's far edge climbs past the top of the glass: the picture holds
+    /// still and the glass slides down over it. The mapping keeps every
+    /// column where it is (no keystone), so the picture always fills the
+    /// glass from edge to edge and nothing is cut off at the sides; the
+    /// vertical re-projection carries the whole feeling of depth.
     public func corners(at angle: Double) -> [ScreenPoint] {
         let travel = max(startAngle - angle, 0)
         let separation = min(depth * travel, maximumSeparation)
@@ -81,38 +84,29 @@ public struct FoldGeometry: Sendable {
         let reach = eyeDistance * height
         let lift = eyeHeight * height
         let up = (y: sin(start), z: cos(start))
-        let eye = (x: width / 2,
-                   y: centre.y + normal.y * reach + up.y * lift,
+        let eye = (y: centre.y + normal.y * reach + up.y * lift,
                    z: centre.z + normal.z * reach + up.z * lift)
 
         // Glass plane through the hinge with normal n(lid).
         let n = (y: -cos(lid), z: sin(lid))
         let nDotEye = n.y * eye.y + n.z * eye.z
 
-        func project(_ px: Double, _ ph: Double) -> ScreenPoint {
-            // Picture point in the room.
-            let q = (x: px, y: ph * sin(pic), z: ph * cos(pic))
-            let d = (x: q.x - eye.x, y: q.y - eye.y, z: q.z - eye.z)
+        /// Height on the glass where the picture point at height `ph` shows.
+        func along(_ ph: Double) -> Double {
+            let q = (y: ph * sin(pic), z: ph * cos(pic))
+            let d = (y: q.y - eye.y, z: q.z - eye.z)
             let nDotD = n.y * d.y + n.z * d.z
-            // Ray eye + t·d meets the glass where n·p = 0.
-            let t: Double
-            if abs(nDotD) < 1e-9 {
-                t = 1
-            } else {
-                t = -nDotEye / nDotD
-            }
-            // A picture point behind the eye would flip; hold it at the eye.
-            let clamped = max(t, 1e-3)
-            let hit = (x: eye.x + clamped * d.x, y: eye.y + clamped * d.y, z: eye.z + clamped * d.z)
-            let along = hit.y * sin(lid) + hit.z * cos(lid)
-            return ScreenPoint(x: hit.x, y: along)
+            let t = abs(nDotD) < 1e-9 ? 1 : max(-nDotEye / nDotD, 1e-3)
+            let hit = (y: eye.y + t * d.y, z: eye.z + t * d.z)
+            return hit.y * sin(lid) + hit.z * cos(lid)
         }
+        let top = max(along(height), height * 0.5)
 
         return [
-            project(0, 0),
-            project(width, 0),
-            project(width, height),
-            project(0, height),
+            ScreenPoint(x: 0, y: 0),
+            ScreenPoint(x: width, y: 0),
+            ScreenPoint(x: width, y: top),
+            ScreenPoint(x: 0, y: top),
         ]
     }
 }

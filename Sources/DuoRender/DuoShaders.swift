@@ -23,6 +23,21 @@ public enum DuoShaders {
         float4 extra;            // sheen position, grain, time, unused
     };
 
+    // Fills the padded picture from a frame: inside, the frame itself; in the
+    // margin, the frame's own edge stretched out, so a blur that reaches past
+    // the edge sees more of the same light rather than black.
+    struct PadUniforms {
+        float4 inset;   // inset in pixels (x, y), frame size in pixels (z, w)
+    };
+
+    fragment float4 padFragment(float4 position [[position]],
+                                constant PadUniforms &u [[buffer(0)]],
+                                texture2d<float> frame [[texture(0)]]) {
+        constexpr sampler edge(filter::linear, address::clamp_to_edge);
+        float2 uv = (position.xy - u.inset.xy) / u.inset.zw;
+        return float4(frame.sample(edge, uv).rgb, 1.0);
+    }
+
     vertex float4 duoVertex(uint id [[vertex_id]]) {
         const float2 corners[3] = { float2(-1.0, -3.0), float2(-1.0, 1.0), float2(3.0, 1.0) };
         return float4(corners[id], 0.0, 1.0);
@@ -80,8 +95,8 @@ public enum DuoShaders {
         // Frost. The far edge dissolves first; the hinge stays readable.
         float blur = blurStrength * (blurFloor + (1.0 - blurFloor) * pow(g, 1.35));
         float radius = blur * maxRadius;
-        // Light past the edge is always diffuse.
-        if (outside > 0.0) { radius = max(radius, 0.35 * maxRadius); }
+        // Light past the edge is diffuse, eased in so the edge itself has no seam.
+        radius = max(radius, smoothstep(0.0, 24.0, outside) * 0.35 * maxRadius);
         // Naming this `level` would shadow Metal's level() selector.
         float mip = clamp(log2(max(radius, 1.0)), 0.0, maxLevel);
 
@@ -103,7 +118,7 @@ public enum DuoShaders {
         }
         // The leak fades with distance from the edge.
         float glowReach = max(0.9 * maxRadius / pixelScale, 24.0);
-        colour *= exp(-pow(outside / glowReach, 1.3)) * 0.85;
+        colour *= exp(-pow(outside / glowReach, 1.3));
 
         // Dimming, in linear light so the far edge fades into the dark
         // rather than going grey. Full black only at the very top.

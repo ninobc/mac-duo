@@ -50,7 +50,7 @@
     float g = clamp(height / max(visibleTop, 0.25), 0.0, 1.0);
     float blur = blurStrength * (blurFloor + (1.0 - blurFloor) * pow(g, 1.35));
     float radius = blur * maxRadius;
-    if (outside > 0.0) radius = max(radius, 0.35 * maxRadius);
+    radius = max(radius, smoothstep(0.0, 24.0, outside) * 0.35 * maxRadius);
     float lod = clamp(log2(max(radius, 1.0)), 0.0, maxLevel);
     vec3 colour = vec3(0);
     if (radius < 0.75) {
@@ -64,7 +64,7 @@
       }
     }
     float glowReach = max(0.9 * maxRadius / pixelScale, 24.0);
-    colour *= exp(-pow(outside / glowReach, 1.3)) * 0.85;
+    colour *= exp(-pow(outside / glowReach, 1.3));
     float spread = clamp((g - dimStart) / max(1.0 - dimStart, 0.05), 0.0, 1.0);
     float dim = dimStrength * pow(spread, 1.9) * maxDim;
     colour *= pow(1.0 - dim, 1.6);

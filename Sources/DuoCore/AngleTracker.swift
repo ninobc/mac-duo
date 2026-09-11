@@ -60,6 +60,14 @@ public struct AngleTracker: Sendable {
         if velocity >= closingSpeed { lastOpening = time }
     }
 
+    /// Where the lid most likely is right now, carrying the last movement
+    /// forward between sensor refreshes so the picture moves every frame
+    /// instead of stepping ten times a second.
+    public func extrapolatedAngle(at time: TimeInterval, horizon: TimeInterval = 0.11) -> Double {
+        let age = min(max(time - lastChange, 0), horizon)
+        return angle + velocity * age
+    }
+
     public func predictedAngle(at time: TimeInterval) -> Double {
         guard velocity < -predictionFloor else { return angle }
         let age = min(max(time - lastChange, 0), 0.12)

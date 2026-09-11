@@ -102,6 +102,7 @@ public final class DuoRenderer {
     nonisolated public let device: MTLDevice
     nonisolated private let queue: MTLCommandQueue
     private let pipeline: MTLRenderPipelineState
+    private let padPipeline: MTLRenderPipelineState
 
     private var texture: MTLTexture?
     private var screenSize: CGSize = .zero
@@ -130,6 +131,11 @@ public final class DuoRenderer {
             descriptor.fragmentFunction = library.makeFunction(name: "duoFragment")
             descriptor.colorAttachments[0].pixelFormat = .bgra8Unorm_srgb
             pipeline = try device.makeRenderPipelineState(descriptor: descriptor)
+            let pad = MTLRenderPipelineDescriptor()
+            pad.vertexFunction = library.makeFunction(name: "duoVertex")
+            pad.fragmentFunction = library.makeFunction(name: "padFragment")
+            pad.colorAttachments[0].pixelFormat = .bgra8Unorm_srgb
+            padPipeline = try device.makeRenderPipelineState(descriptor: pad)
         } catch {
             log.error("pipeline failed: \(String(describing: error), privacy: .public)")
             return nil
@@ -166,37 +172,60 @@ public final class DuoRenderer {
         let padded = CGSize(width: screenSize.width + 2 * padding, height: screenSize.height + 2 * padding)
         let width = Int((padded.width * pixelScale).rounded())
         let height = Int((padded.height * pixelScale).rounded())
-        guard width > 0, height > 0 else { return nil }
-        let bytesPerRow = width * 4
-        guard let staging = device.makeBuffer(length: bytesPerRow * height, options: .storageModeShared) else { return nil }
+        let frameWidth = Int((screenSize.width * pixelScale).rounded())
+        let frameHeight = Int((screenSize.height * pixelScale).rounded())
+        guard width > 0, height > 0, frameWidth > 0, frameHeight > 0 else { return nil }
+
+        // The frame, drawn once at screen resolution.
+        let bytesPerRow = frameWidth * 4
+        guard let staging = device.makeBuffer(length: bytesPerRow * frameHeight, options: .storageModeShared) else { return nil }
         let space = CGColorSpace(name: Self.colourSpace) ?? CGColorSpaceCreateDeviceRGB()
         guard let context = CGContext(
-            data: staging.contents(), width: width, height: height, bitsPerComponent: 8,
+            data: staging.contents(), width: frameWidth, height: frameHeight, bitsPerComponent: 8,
             bytesPerRow: bytesPerRow, space: space,
             bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue
         ) else { return nil }
-        context.setFillColor(CGColor(red: 0, green: 0, blue: 0, alpha: 1))
-        context.fill(CGRect(x: 0, y: 0, width: width, height: height))
-        let inset = padding * pixelScale
         context.interpolationQuality = .high
-        context.draw(image, in: CGRect(x: inset, y: inset, width: CGFloat(width) - 2 * inset, height: CGFloat(height) - 2 * inset))
+        context.draw(image, in: CGRect(x: 0, y: 0, width: frameWidth, height: frameHeight))
 
+        let frameDescriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .bgra8Unorm_srgb, width: frameWidth, height: frameHeight, mipmapped: false)
+        frameDescriptor.usage = [.shaderRead]
+        frameDescriptor.storageMode = .private
         let levels = Int(floor(log2(Double(max(width, height))))) + 1
         let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .bgra8Unorm_srgb, width: width, height: height, mipmapped: true)
-        descriptor.usage = [.shaderRead, .shaderWrite]
+        descriptor.usage = [.shaderRead, .shaderWrite, .renderTarget]
         descriptor.storageMode = .private
-        guard var texture = device.makeTexture(descriptor: descriptor),
+        guard let frame = device.makeTexture(descriptor: frameDescriptor),
+              var texture = device.makeTexture(descriptor: descriptor),
               let commands = queue.makeCommandBuffer(),
               let blit = commands.makeBlitCommandEncoder() else { return nil }
-        blit.copy(from: staging, sourceOffset: 0, sourceBytesPerRow: bytesPerRow, sourceBytesPerImage: bytesPerRow * height,
-                  sourceSize: MTLSize(width: width, height: height, depth: 1),
-                  to: texture, destinationSlice: 0, destinationLevel: 0, destinationOrigin: MTLOrigin(x: 0, y: 0, z: 0))
+        blit.copy(from: staging, sourceOffset: 0, sourceBytesPerRow: bytesPerRow, sourceBytesPerImage: bytesPerRow * frameHeight,
+                  sourceSize: MTLSize(width: frameWidth, height: frameHeight, depth: 1),
+                  to: frame, destinationSlice: 0, destinationLevel: 0, destinationOrigin: MTLOrigin(x: 0, y: 0, z: 0))
         blit.endEncoding()
+        encodePad(frame: frame, into: texture, pixelScale: pixelScale, commands: commands)
         MPSImageGaussianPyramid(device: device, centerWeight: 0.375)
             .encode(commandBuffer: commands, inPlaceTexture: &texture, fallbackCopyAllocator: nil)
         commands.commit()
         commands.waitUntilCompleted()
         return Picture(texture: texture, colourSpace: space, screenSize: screenSize, pixelScale: pixelScale, maxLevel: Float(levels - 1))
+    }
+
+    /// Draws `frame` into level 0 of `target`: the frame in the middle, its
+    /// edges stretched across the margin.
+    nonisolated private func encodePad(frame: MTLTexture, into target: MTLTexture, pixelScale: CGFloat, commands: MTLCommandBuffer) {
+        let pass = MTLRenderPassDescriptor()
+        pass.colorAttachments[0].texture = target
+        pass.colorAttachments[0].loadAction = .dontCare
+        pass.colorAttachments[0].storeAction = .store
+        guard let encoder = commands.makeRenderCommandEncoder(descriptor: pass) else { return }
+        let inset = Float((Self.padding * pixelScale).rounded())
+        var uniforms = SIMD4<Float>(inset, inset, Float(frame.width), Float(frame.height))
+        encoder.setRenderPipelineState(padPipeline)
+        encoder.setFragmentBytes(&uniforms, length: MemoryLayout<SIMD4<Float>>.stride, index: 0)
+        encoder.setFragmentTexture(frame, index: 0)
+        encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 3)
+        encoder.endEncoding()
     }
 
     public func adopt(_ picture: Picture) {
@@ -260,6 +289,9 @@ public final class DuoRenderer {
         return true
     }
 
+    /// A texture the size of one frame, reused between seeds.
+    private var seedTexture: MTLTexture?
+
     public func absorb(_ frame: MTLTexture) {
         guard isLive, liveTexture != nil else { return }
         pendingFrame = frame
@@ -296,28 +328,28 @@ public final class DuoRenderer {
 
     private func absorbPending(into commands: MTLCommandBuffer) {
         guard var target = liveTexture, pendingFrame != nil || pendingSeed != nil else { return }
-        let inset = Int((Self.padding * pixelScale).rounded())
-        guard let blit = commands.makeBlitCommandEncoder() else { return }
+        var source: MTLTexture?
         if let frame = pendingFrame {
-            let width = min(frame.width, target.width - 2 * inset)
-            let height = min(frame.height, target.height - 2 * inset)
-            if width > 0, height > 0 {
-                blit.copy(from: frame, sourceSlice: 0, sourceLevel: 0, sourceOrigin: MTLOrigin(x: 0, y: 0, z: 0),
-                          sourceSize: MTLSize(width: width, height: height, depth: 1),
-                          to: target, destinationSlice: 0, destinationLevel: 0, destinationOrigin: MTLOrigin(x: inset, y: inset, z: 0))
-            }
+            source = frame
         } else if let seed = pendingSeed {
-            let width = min(seed.width, target.width - 2 * inset)
-            let height = min(seed.height, target.height - 2 * inset)
-            if width > 0, height > 0 {
+            if seedTexture == nil || seedTexture!.width != seed.width || seedTexture!.height != seed.height {
+                let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .bgra8Unorm_srgb, width: seed.width, height: seed.height, mipmapped: false)
+                descriptor.usage = [.shaderRead]
+                descriptor.storageMode = .private
+                seedTexture = device.makeTexture(descriptor: descriptor)
+            }
+            if let seedTexture, let blit = commands.makeBlitCommandEncoder() {
                 blit.copy(from: seed.buffer, sourceOffset: 0, sourceBytesPerRow: seed.width * 4, sourceBytesPerImage: seed.width * 4 * seed.height,
-                          sourceSize: MTLSize(width: width, height: height, depth: 1),
-                          to: target, destinationSlice: 0, destinationLevel: 0, destinationOrigin: MTLOrigin(x: inset, y: inset, z: 0))
+                          sourceSize: MTLSize(width: seed.width, height: seed.height, depth: 1),
+                          to: seedTexture, destinationSlice: 0, destinationLevel: 0, destinationOrigin: MTLOrigin(x: 0, y: 0, z: 0))
+                blit.endEncoding()
+                source = seedTexture
             }
         }
         pendingFrame = nil
         pendingSeed = nil
-        blit.endEncoding()
+        guard let source else { return }
+        encodePad(frame: source, into: target, pixelScale: pixelScale, commands: commands)
         _ = pyramid.encode(commandBuffer: commands, inPlaceTexture: &target, fallbackCopyAllocator: nil)
         liveTexture = target
         texture = target

@@ -36,7 +36,7 @@ final class FoldController {
     @ObservationIgnored private let snapshot = ScreenSnapshot()
     @ObservationIgnored private let overlay = FoldOverlay()
     @ObservationIgnored private var decider: FoldDecider
-    @ObservationIgnored private var spring = DampedSpring(frequency: 14)
+    @ObservationIgnored private var spring = DampedSpring(frequency: 9)
     @ObservationIgnored private var displayLink: CADisplayLink?
     @ObservationIgnored private var lastFrame: CFTimeInterval = 0
     @ObservationIgnored private var lastPublish: CFTimeInterval = 0
@@ -256,7 +256,8 @@ final class FoldController {
         }
         isActive = true
         activationTime = time
-        spring.snap(to: monitor.tracker.angle)
+        // Ease in from the start angle, so a lid already past it does not pop.
+        spring.snap(to: snapping ? monitor.tracker.angle : max(monitor.tracker.angle, preferences.effect.startAngle))
         snapshotTimer?.invalidate()
         snapshotTimer = nil
         Log.fold.notice("fold begins at \(self.monitor.tracker.angle, format: .fixed(precision: 1))°, velocity \(self.monitor.tracker.velocity, format: .fixed(precision: 0))°/s")
@@ -348,7 +349,7 @@ final class FoldController {
             drawReveal(reveal, at: now)
             return
         }
-        let target = scrubAngle ?? monitor.tracker.angle
+        let target = scrubAngle ?? monitor.tracker.extrapolatedAngle(at: now)
         spring.advance(toward: target, dt: dt)
         draw(angle: spring.value, at: now)
     }

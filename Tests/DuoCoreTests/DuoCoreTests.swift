@@ -21,26 +21,21 @@ final class FoldGeometryTests: XCTestCase {
         }
     }
 
-    func testPictureHoldsStillWhileGlassSlidesOverIt() {
-        // The far edge climbs past the top of the glass and the sides draw in.
+    func testPictureHoldsStillAndAlwaysFillsTheGlass() {
+        // The far edge climbs past the top of the glass; the sides never draw in.
         let g = FoldGeometry(screenWidth: 1512, screenHeight: 982, startAngle: 100)
         var lastHeight = 0.0
-        var lastWidth = Double.infinity
         for angle in stride(from: 100.0, through: 40.0, by: -10) {
             let c = g.corners(at: angle)
-            let height = c[2].y
-            let width = c[2].x - c[3].x
+            XCTAssertEqual(c[0].x, 0, accuracy: 1e-9); XCTAssertEqual(c[1].x, 1512, accuracy: 1e-9)
+            XCTAssertEqual(c[3].x, 0, accuracy: 1e-9); XCTAssertEqual(c[2].x, 1512, accuracy: 1e-9)
+            XCTAssertEqual(c[2].y, c[3].y, accuracy: 1e-9, "top edge stays level")
             if angle <= 80 {
-                XCTAssertGreaterThanOrEqual(height, lastHeight - 1e-6, "height at \(angle)")
+                XCTAssertGreaterThanOrEqual(c[2].y, lastHeight - 1e-6, "height at \(angle)")
             }
-            XCTAssertLessThanOrEqual(width, lastWidth + 1e-6, "width at \(angle)")
-            XCTAssertEqual(c[2].y, c[3].y, accuracy: 1e-6, "top edge stays level")
-            XCTAssertEqual(c[3].x, 1512 - c[2].x, accuracy: 1e-6, "symmetric about the centre")
-            lastHeight = height
-            lastWidth = width
+            lastHeight = c[2].y
         }
         XCTAssertGreaterThan(lastHeight, 982)
-        XCTAssertLessThan(lastWidth, 1512)
     }
 
     func testZeroDepthKeepsTheScreen() {
