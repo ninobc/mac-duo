@@ -256,6 +256,7 @@ final class FoldController {
         }
         isActive = true
         activationTime = time
+        drewSettledFrame = false
         // Ease in from the start angle, so a lid already past it does not pop.
         spring.snap(to: snapping ? monitor.tracker.angle : max(monitor.tracker.angle, preferences.effect.startAngle))
         snapshotTimer?.invalidate()
@@ -342,17 +343,26 @@ final class FoldController {
         let now = CACurrentMediaTime()
         let dt = min(max(now - lastFrame, 1.0 / 240), 1.0 / 20)
         lastFrame = now
+        var hasNewFrame = false
         if let frame = stream.takeFrame() {
             overlay.absorb(frame)
+            hasNewFrame = true
         }
         if let reveal {
             drawReveal(reveal, at: now)
             return
         }
         let target = scrubAngle ?? monitor.tracker.extrapolatedAngle(at: now)
+        let wasSettled = spring.isSettled(at: target, tolerance: 0.02)
         spring.advance(toward: target, dt: dt)
+        // A lid held still with nothing new on screen needs no new frame;
+        // the grain is the only thing that would move, and it can wait.
+        if wasSettled, !hasNewFrame, spring.isSettled(at: target, tolerance: 0.02), drewSettledFrame { return }
+        drewSettledFrame = spring.isSettled(at: target, tolerance: 0.02) && !hasNewFrame
         draw(angle: spring.value, at: now)
     }
+
+    @ObservationIgnored private var drewSettledFrame = false
 
     private func draw(angle: Double, at time: CFTimeInterval) {
         overlay.render(FrameParameters.make(effect: preferences.effect, screenSize: overlay.screenSize, angle: angle, time: time))
