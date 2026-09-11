@@ -23,3 +23,14 @@ enum ScreenRecordingPermission {
         NSWorkspace.shared.open(settingsURL)
     }
 }
+
+/// The Lock Screen pane, for the "require password after" delay that lets
+/// the wake reveal play instead of the login window.
+enum LockScreenSettings {
+    static let url = URL(string: "x-apple.systempreferences:com.apple.Lock-Screen-Settings.extension")!
+
+    @MainActor
+    static func open() {
+        NSWorkspace.shared.open(url)
+    }
+}

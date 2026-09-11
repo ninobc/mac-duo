@@ -40,6 +40,16 @@ private struct GeneralSettings: View {
                     .disabled(!controller.sensorAvailable)
                 Toggle("Bring the desktop into focus on wake", isOn: $preferences.focusOnWake)
                     .disabled(!controller.sensorAvailable)
+                if preferences.focusOnWake {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("The reveal plays only when the lid opens to your desktop. If macOS asks for your password first, set Lock Screen › \"Require password after display is turned off\" to a short delay.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Button("Open Lock Screen Settings") { LockScreenSettings.open() }
+                            .controlSize(.small)
+                    }
+                }
                 Toggle("Launch at login", isOn: $launchesAtLogin)
                     .onChange(of: launchesAtLogin) { _, wanted in
                         launchesAtLogin = LaunchAtLogin.set(wanted)
