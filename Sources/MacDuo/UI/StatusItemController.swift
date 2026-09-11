@@ -15,15 +15,15 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     private var lastGlyph: (angle: Int, active: Bool) = (-1, false)
 
     private let statusLine = NSMenuItem()
-    private let enableItem = NSMenuItem(title: "Enable Mac Duo", action: #selector(toggleEnabled), keyEquivalent: "")
+    private var enableRow: MenuToggleRow!
     private let previewItem = NSMenuItem(title: "Preview Fold", action: #selector(preview), keyEquivalent: "p")
     private let styleMenu = NSMenu(title: "Style")
     private let updateItem = NSMenuItem(title: "Check for Updates…", action: #selector(checkForUpdates), keyEquivalent: "")
     private let permissionItem = NSMenuItem(title: "Allow Screen Recording…", action: #selector(openPermission), keyEquivalent: "")
-    private let liveItem = NSMenuItem(title: "Live Picture", action: #selector(toggleLive), keyEquivalent: "")
-    private let wakeItem = NSMenuItem(title: "Focus on Wake", action: #selector(toggleWake), keyEquivalent: "")
-    private let angleItem = NSMenuItem(title: "Show Angle in Menu Bar", action: #selector(toggleAngle), keyEquivalent: "")
-    private let loginItem = NSMenuItem(title: "Launch at Login", action: #selector(toggleLogin), keyEquivalent: "")
+    private var liveRow: MenuToggleRow!
+    private var wakeRow: MenuToggleRow!
+    private var angleRow: MenuToggleRow!
+    private var loginRow: MenuToggleRow!
     private var startRow: MenuSliderRow!
     private var frostRow: MenuSliderRow!
     private var darkRow: MenuSliderRow!
@@ -56,11 +56,13 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         menu.addItem(statusLine)
         menu.addItem(.separator())
 
-        for item in [enableItem, previewItem] {
-            item.target = self
-            menu.addItem(item)
+        enableRow = MenuToggleRow(title: "Mac Duo", isOn: preferences.isEnabled, emphasised: true) { [weak self] on in
+            self?.preferences.isEnabled = on
         }
+        menu.addItem(viewItem(enableRow))
+        previewItem.target = self
         previewItem.keyEquivalentModifierMask = [.command, .shift]
+        menu.addItem(previewItem)
 
         let style = NSMenuItem(title: "Style", action: nil, keyEquivalent: "")
         for preset in EffectPreset.allCases {
@@ -96,9 +98,21 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         }
         menu.addItem(.separator())
 
-        for item in [liveItem, wakeItem, angleItem, loginItem] {
-            item.target = self
-            menu.addItem(item)
+        liveRow = MenuToggleRow(title: "Live Picture", isOn: preferences.effect.livePicture) { [weak self] on in
+            self?.preferences.effect.livePicture = on
+        }
+        wakeRow = MenuToggleRow(title: "Focus on Wake", isOn: preferences.focusOnWake) { [weak self] on in
+            self?.preferences.focusOnWake = on
+        }
+        angleRow = MenuToggleRow(title: "Show Angle in Menu Bar", isOn: preferences.showsAngleInMenuBar) { [weak self] on in
+            self?.preferences.showsAngleInMenuBar = on
+        }
+        loginRow = MenuToggleRow(title: "Launch at Login", isOn: LaunchAtLogin.isEnabled) { [weak self] on in
+            let actual = LaunchAtLogin.set(on)
+            self?.loginRow.set(isOn: actual)
+        }
+        for row in [liveRow!, wakeRow!, angleRow!, loginRow!] {
+            menu.addItem(viewItem(row))
         }
         menu.addItem(.separator())
 
@@ -119,6 +133,12 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         menu.addItem(quit)
     }
 
+    private func viewItem(_ view: NSView) -> NSMenuItem {
+        let item = NSMenuItem()
+        item.view = view
+        return item
+    }
+
     func menuNeedsUpdate(_ menu: NSMenu) {
         let status = controller.status
         let angle = String(format: "%.0f°", controller.angle)
@@ -132,16 +152,16 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         case .ready:
             statusLine.title = controller.isActive ? "Folding  ·  \(angle)" : "Ready  ·  \(angle)"
         }
-        enableItem.state = preferences.isEnabled ? .on : .off
-        enableItem.isEnabled = status != .noSensor
+        enableRow.set(isOn: preferences.isEnabled)
+        enableRow.isEnabled = status != .noSensor
         startRow.set(value: preferences.effect.startAngle)
         frostRow.set(value: preferences.effect.blurRadius)
         darkRow.set(value: preferences.effect.dimming)
-        liveItem.state = preferences.effect.livePicture ? .on : .off
-        wakeItem.state = preferences.focusOnWake ? .on : .off
-        angleItem.state = preferences.showsAngleInMenuBar ? .on : .off
-        loginItem.state = LaunchAtLogin.isEnabled ? .on : .off
-        for item in [liveItem, wakeItem, angleItem] { item.isEnabled = status != .noSensor }
+        liveRow.set(isOn: preferences.effect.livePicture)
+        wakeRow.set(isOn: preferences.focusOnWake)
+        angleRow.set(isOn: preferences.showsAngleInMenuBar)
+        loginRow.set(isOn: LaunchAtLogin.isEnabled)
+        for row in [liveRow!, wakeRow!, angleRow!] { row.isEnabled = status != .noSensor }
         previewItem.isEnabled = status == .ready || status == .off
         permissionItem.isHidden = status != .needsPermission
         let current = preferences.preset
@@ -175,10 +195,6 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
     // MARK: Actions
 
-    @objc private func toggleEnabled() {
-        preferences.isEnabled.toggle()
-    }
-
     @objc private func preview() {
         controller.preview()
     }
@@ -187,11 +203,6 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         guard let raw = sender.representedObject as? String, let preset = EffectPreset(rawValue: raw) else { return }
         preferences.apply(preset)
     }
-
-    @objc private func toggleLive() { preferences.effect.livePicture.toggle() }
-    @objc private func toggleWake() { preferences.focusOnWake.toggle() }
-    @objc private func toggleAngle() { preferences.showsAngleInMenuBar.toggle() }
-    @objc private func toggleLogin() { LaunchAtLogin.set(!LaunchAtLogin.isEnabled) }
 
     @objc private func openEffectSettings() {
         windows.showSettings(tab: .effect)
