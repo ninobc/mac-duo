@@ -65,7 +65,7 @@ final class Preferences {
         ])
         // The look was retuned in schema 2 (no sheen or grain, reference
         // geometry); settings saved before that start again from Duo.
-        let schema = 3
+        let schema = 4
         if defaults.integer(forKey: Key.effectSchema) < schema {
             defaults.removeObject(forKey: Key.effect)
             defaults.set(schema, forKey: Key.effectSchema)

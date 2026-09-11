@@ -77,6 +77,10 @@ public struct FrameParameters {
         parameters.dimHingeFloor = effect.dimHingeFloor
         parameters.topEdge = flat ? height * 10 : corners[2].y
         parameters.recede = 1
+        // Deep into the close the picture is nearly edge-on and its hinge
+        // rows stretch across the glass; frost them too so nothing streaks.
+        let separation = flat ? 0 : min(effect.depth * max(effect.startAngle - angle, 0), 88)
+        parameters.blurFloor = max(effect.blurFloor, FoldCurve.smoothstep((separation - 45) / 35))
         return parameters
     }
 }

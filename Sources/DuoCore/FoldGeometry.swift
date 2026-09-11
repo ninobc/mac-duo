@@ -29,7 +29,7 @@ public struct FoldGeometry: Sendable {
 
     /// Eye distance from the middle of the screen, in screen heights, measured
     /// along the glass normal at the start angle.
-    public var eyeDistance: Double = 6
+    public var eyeDistance: Double = 2.4
 
     /// Eye height above the middle of the screen, in screen heights, measured
     /// along the glass at the start angle.

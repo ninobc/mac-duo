@@ -27,7 +27,7 @@ public struct EffectSettings: Codable, Equatable, Sendable {
     /// How much the picture stays fixed in the room. 1 is physically right.
     public var depth: Double = 1
     /// Eye distance in screen heights. Closer means stronger perspective.
-    public var eyeDistance: Double = 5.5
+    public var eyeDistance: Double = 2.4
     /// The travelling highlight on the frosted glass.
     public var sheen: Double = 0
     /// Fine grain that hides banding in the dark gradient.
@@ -68,6 +68,7 @@ public struct EffectSettings: Codable, Equatable, Sendable {
         s.dimReach = 0.75
         s.dimHingeFloor = 0.1
         s.depth = 0.8
+        s.eyeDistance = 3.5
         return s
     }()
 
@@ -80,7 +81,7 @@ public struct EffectSettings: Codable, Equatable, Sendable {
         s.dimReach = 0.45
         s.dimHingeFloor = 0.25
         s.depth = 1.2
-        s.eyeDistance = 4.5
+        s.eyeDistance = 2.0
         return s
     }()
 }
