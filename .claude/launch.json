@@ -4,13 +4,26 @@
     {
       "name": "site",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "8787", "--bind", "127.0.0.1", "--directory", "site"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8787",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "site"
+      ],
       "port": 8787
     },
     {
       "name": "duo-site",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "/Users/nino/Documents/Vault/mac-duo-site", "run", "dev", "--", "--host", "127.0.0.1"],
+      "runtimeArgs": [
+        "--prefix",
+        "/Users/nino/Documents/Vault/mac-duo-site",
+        "run",
+        "dev"
+      ],
       "port": 5180
     }
   ]
