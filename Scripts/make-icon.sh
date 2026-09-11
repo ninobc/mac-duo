@@ -3,9 +3,9 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 mkdir -p build/icon
-if [ -f Resources/IconArt/macbook-render.png ]; then
+if [ -f Resources/IconArt/mark.png ]; then
   # The rendered artwork, fitted to the macOS icon grid.
-  swift Scripts/icon/MaskIcon.swift Resources/IconArt/macbook-render.png build/icon/AppIcon-1024.png
+  swift Scripts/icon/MaskIcon.swift Resources/IconArt/mark.png build/icon/AppIcon-1024.png
 else
   # Procedural fallback.
   swift Scripts/icon/MakeIcon.swift build/icon/AppIcon-1024.png
