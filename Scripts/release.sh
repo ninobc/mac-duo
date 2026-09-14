@@ -16,8 +16,8 @@ if [ -d "$SITE/public" ]; then
 cat > "$SITE/public/updates.json" <<JSON
 {
   "version": "$VERSION",
-  "url": "https://mac-duo.com/#install",
-  "notes": "Mac Duo $VERSION is available. Download it from mac-duo.com."
+  "url": "https://github.com/ninobc/mac-duo/releases/latest/download/Mac-Duo.dmg",
+  "notes": "${RELEASE_NOTES:-Mac Duo $VERSION is available.}"
 }
 JSON
 echo "updated $SITE/public/updates.json"

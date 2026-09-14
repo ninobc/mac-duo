@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.2 — 2026-09-14
+
+- Signed with a Developer ID certificate and notarized by Apple. macOS opens Mac Duo without the "Not Opened" warning; no Open Anyway step.
+- Bigger sense of depth: the frozen desktop stands at the start angle and the eye sits closer, so the picture converges hard as the lid comes down. Hinge rows frost at the end of the close.
+- README and mac-duo.com carry install notes for macOS Sequoia.
+
 ## 1.0.1 — 2026-09-11
 
 - Check for Updates now reads GitHub Releases directly and downloads the disk image into Downloads, then opens it.

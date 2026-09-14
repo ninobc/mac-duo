@@ -57,6 +57,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" dist/*.dmg dist/*.zip dist/SHA256SUMS.txt \
-            --title "Mac Duo ${{ steps.v.outputs.version }}" \
-            --notes "Open the DMG and drag Mac Duo to Applications. Requires macOS 14 and a MacBook with a lid angle sensor. See https://mac-duo.com for the install guide."
+          if [ "$NOTARY_PROFILE" = "" ]; then
+            echo "not notarized (signing secrets missing); refusing to publish unsigned assets" >&2
+            exit 1
+          fi
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" dist/*.dmg dist/*.zip dist/SHA256SUMS.txt --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" dist/*.dmg dist/*.zip dist/SHA256SUMS.txt \
+              --title "Mac Duo ${{ steps.v.outputs.version }}" \
+              --notes "Notarized by Apple. Open the DMG and drag Mac Duo to Applications. Requires macOS 14 and a MacBook with a lid angle sensor. See https://mac-duo.com for the install guide."
+          fi
