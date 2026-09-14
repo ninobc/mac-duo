@@ -28,17 +28,7 @@ Runs as a menu bar app. Requires macOS 14 or later and a MacBook with a lid angl
 
 Download `Mac-Duo.dmg` from the [latest release](https://github.com/ninobc/mac-duo/releases/latest) and drag Mac Duo to Applications.
 
-Mac Duo is not yet notarized with Apple, so the first launch shows **"Mac Duo" Not Opened**. That dialog means macOS could not check the signature against Apple's servers, not that anything was found. To open it once:
-
-1. Click **Done** (not Move to Trash).
-2. Open **System Settings › Privacy & Security**, scroll to the bottom, and click **Open Anyway** next to Mac Duo.
-3. Confirm in the dialog that follows. macOS remembers the choice.
-
-Or, from Terminal:
-
-```sh
-xattr -dr com.apple.quarantine "/Applications/Mac Duo.app"
-```
+Builds from 1.0.2 on are signed with a Developer ID and notarized by Apple, so the app opens like any other. Versions before that show **"Mac Duo" Not Opened** on macOS Sequoia; the fix is simply to download the current release.
 
 Then allow Screen Recording when asked. Nothing is stored or sent anywhere; the [privacy statement](https://mac-duo.com/privacy) has the details.
 
