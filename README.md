@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="site/assets/icon-1024.png" width="128" alt="Mac Duo icon">
+<img src="Resources/IconArt/icon-1024.png" width="128" alt="Mac Duo icon">
 
 # Mac Duo
 
@@ -23,6 +23,24 @@ Mac Duo brings the iPhone Duo fold to your MacBook. As the lid comes down, what'
 - **Three looks** (Duo, Soft, Cinematic) plus every knob in Settings, including a scrub slider that folds the real screen while you drag.
 
 Runs as a menu bar app. Requires macOS 14 or later and a MacBook with a lid angle sensor (14/16-inch MacBook Pro from 2021, the 2019 16-inch, MacBook Air M2 and later). Screen Recording permission is needed to see the desktop; nothing is stored or sent anywhere.
+
+## Install
+
+Download `Mac-Duo.dmg` from the [latest release](https://github.com/ninobc/mac-duo/releases/latest) and drag Mac Duo to Applications.
+
+Mac Duo is not yet notarized with Apple, so the first launch shows **"Mac Duo" Not Opened**. That dialog means macOS could not check the signature against Apple's servers, not that anything was found. To open it once:
+
+1. Click **Done** (not Move to Trash).
+2. Open **System Settings › Privacy & Security**, scroll to the bottom, and click **Open Anyway** next to Mac Duo.
+3. Confirm in the dialog that follows. macOS remembers the choice.
+
+Or, from Terminal:
+
+```sh
+xattr -dr com.apple.quarantine "/Applications/Mac Duo.app"
+```
+
+Then allow Screen Recording when asked. Nothing is stored or sent anywhere; the [privacy statement](https://mac-duo.com/privacy) has the details.
 
 ## Build
 
