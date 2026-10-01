@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.0.3 — 2026-10-01
 
 - Fixed the screen freezing after swiping between Spaces or full-screen apps (issue #1). With the lid resting near the start angle (Cinematic starts at 100°), the press of a trackpad swipe could start a fold. That fold put up a still of the screen instead of the live picture and held it until the lid opened past 104°.
   - A fold now needs the lid to close at least 2° from where it rested. Typing or swiping no longer starts one.
