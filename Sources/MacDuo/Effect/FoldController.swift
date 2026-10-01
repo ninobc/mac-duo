@@ -42,6 +42,7 @@ final class FoldController {
     @ObservationIgnored private var lastPublish: CFTimeInterval = 0
     @ObservationIgnored private var snapshotTimer: Timer?
     @ObservationIgnored private var captureInFlight = false
+    @ObservationIgnored private var streamRestarts = 0
     @ObservationIgnored private var isSuspended = false
     @ObservationIgnored private var isScreenLocked = false
     @ObservationIgnored private var layout: (id: CGDirectDisplayID?, frame: CGRect?) = (nil, nil)
@@ -87,6 +88,7 @@ final class FoldController {
         guard sensorAvailable else { return }
         monitor.onSample = { [weak self] tracker, time in self?.handle(tracker: tracker, at: time) }
         monitor.onFailure = { [weak self] in self?.endFold() }
+        stream.onInterruption = { [weak self] in self?.streamInterrupted() }
         monitor.start()
         angle = monitor.tracker.angle
         layout = (NSScreen.builtIn?.displayID, NSScreen.builtIn?.frame)
@@ -245,6 +247,20 @@ final class FoldController {
         snapshot.discard()
     }
 
+    /// The system stopped the stream. A fold still up would hold its last
+    /// frame over the screen: start it again, a couple of times at most,
+    /// and after that keep the held frame, as with Live Picture off.
+    private func streamInterrupted() {
+        guard isActive || decider.phase == .armed, preferences.effect.livePicture, !isSuspended,
+              ScreenRecordingPermission.isGranted else { return }
+        guard streamRestarts < 2 else {
+            FileLog.write("capture", "stream stopped again; the fold holds its last frame")
+            return
+        }
+        streamRestarts += 1
+        stream.start()
+    }
+
     // MARK: Fold
 
     private func beginFold(at time: CFTimeInterval, snapping: Bool) {
@@ -257,6 +273,7 @@ final class FoldController {
         isActive = true
         activationTime = time
         drewSettledFrame = false
+        streamRestarts = 0
         // Ease in from the start angle, so a lid already past it does not pop.
         spring.snap(to: snapping ? monitor.tracker.angle : max(monitor.tracker.angle, preferences.effect.startAngle))
         snapshotTimer?.invalidate()
@@ -286,6 +303,11 @@ final class FoldController {
     private func present() {
         guard let screen = NSScreen.builtIn else { return }
         if preferences.effect.livePicture, overlay.showLive(on: screen) {
+            // Usually warm already, from the lid closing towards the start
+            // angle. A fold that starts without that (a lid already below
+            // it, a scrub) must still go live, or the overlay holds a still
+            // of the whole screen for as long as the fold is up.
+            stream.start()
             startDisplayLink()
             if let frame = stream.takeFrame() {
                 overlay.absorb(frame)

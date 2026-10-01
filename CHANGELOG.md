@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Fixed the screen freezing after swiping between Spaces or full-screen apps (issue #1). With the lid resting near the start angle (Cinematic starts at 100°), the press of a trackpad swipe could start a fold. That fold put up a still of the screen instead of the live picture and held it until the lid opened past 104°.
+  - A fold now needs the lid to close at least 2° from where it rested. Typing or swiping no longer starts one.
+  - A live fold always starts its live picture, however it began.
+  - A fold whose lid is back above the start angle shows nothing, so it lets go after 0.6 s.
+  - If macOS stops the screen capture during a fold, it restarts. A capture that finishes starting after it was stopped is closed instead of left running.
+
 ## 1.0.2 — 2026-09-14
 
 - Signed with a Developer ID certificate and notarized by Apple. macOS opens Mac Duo without the "Not Opened" warning; no Open Anyway step.

@@ -12,8 +12,10 @@ final class ScreenStream {
     /// Display P3 shares sRGB's transfer curve, so an sRGB texture view decodes it.
     nonisolated static let colourSpace = DuoRenderer.colourSpace
 
-    private final class Receiver: NSObject, SCStreamOutput {
+    private final class Receiver: NSObject, SCStreamOutput, SCStreamDelegate {
         private let cache: CVMetalTextureCache
+        /// Called on the stream's queue when the system stops the capture.
+        var onStop: (@Sendable (Error) -> Void)?
         private let lock = NSLock()
         private var newest: CVMetalTexture?
         private var newestID: UInt64 = 0
@@ -46,6 +48,10 @@ final class ScreenStream {
             newestID &+= 1
             lock.unlock()
         }
+
+        func stream(_ stream: SCStream, didStopWithError error: Error) {
+            onStop?(error)
+        }
     }
 
     private let device: MTLDevice?
@@ -59,6 +65,15 @@ final class ScreenStream {
     private static let minimumHandOver: CFTimeInterval = 1.0 / 60
 
     private(set) var isRunning = false
+
+    /// The system stopped a running stream: a display change, the screen
+    /// taken by something else, permission revoked. Without it, whatever is
+    /// showing the stream's frames would hold the last one.
+    var onInterruption: (() -> Void)?
+
+    /// Bumped on every start and stop, so a start that finishes after a
+    /// stop (or after a newer start) closes its stream instead of keeping it.
+    private var generation = 0
 
     init(device: MTLDevice? = MTLCreateSystemDefaultDevice()) {
         self.device = device
@@ -79,15 +94,18 @@ final class ScreenStream {
         guard !isRunning, starting == nil, device != nil else { return }
         guard let screen = NSScreen.builtIn, let id = screen.displayID else { return }
         isRunning = true
+        generation += 1
+        let token = generation
         starting = Task { [weak self] in
-            await self?.begin(display: id)
-            self?.starting = nil
+            await self?.begin(display: id, generation: token)
+            if self?.generation == token { self?.starting = nil }
         }
     }
 
     func stop() {
         guard isRunning || stream != nil else { return }
         isRunning = false
+        generation += 1
         starting?.cancel()
         starting = nil
         let closing = stream
@@ -110,7 +128,7 @@ final class ScreenStream {
         return latest.texture
     }
 
-    private func begin(display id: CGDirectDisplayID) async {
+    private func begin(display id: CGDirectDisplayID, generation token: Int) async {
         guard let device, let receiver = Receiver(device: device) else {
             isRunning = false
             return
@@ -119,8 +137,8 @@ final class ScreenStream {
             filter = await ContentFilterBuilder.make(display: id)
             filterDisplay = filter == nil ? nil : id
         }
-        guard isRunning, let filter else {
-            isRunning = false
+        guard isRunning, token == generation, let filter else {
+            if token == generation { isRunning = false }
             return
         }
         let configuration = SCStreamConfiguration()
@@ -133,13 +151,16 @@ final class ScreenStream {
         configuration.queueDepth = 5
         configuration.scalesToFit = false
 
-        let fresh = SCStream(filter: filter, configuration: configuration, delegate: nil)
+        let fresh = SCStream(filter: filter, configuration: configuration, delegate: receiver)
+        receiver.onStop = { [weak self, weak fresh] error in
+            Task { @MainActor in self?.stopped(fresh, error: error) }
+        }
         do {
             try fresh.addStreamOutput(receiver, type: .screen,
                                       sampleHandlerQueue: DispatchQueue(label: "com.mac-duo.frames", qos: .userInteractive))
             let started = CACurrentMediaTime()
             try await fresh.startCapture()
-            guard isRunning else {
+            guard isRunning, token == generation, !Task.isCancelled else {
                 try? await fresh.stopCapture()
                 return
             }
@@ -151,7 +172,22 @@ final class ScreenStream {
             Log.capture.error("stream failed: \(String(describing: error), privacy: .public)")
             FileLog.write("capture", "stream failed: \(error)")
             invalidateFilter()
-            isRunning = false
+            if token == generation { isRunning = false }
         }
+    }
+
+    private func stopped(_ stopped: SCStream?, error: Error) {
+        guard let stopped, stopped === stream else { return }
+        Log.capture.error("stream stopped by the system: \(String(describing: error), privacy: .public)")
+        FileLog.write("capture", "stream stopped by the system: \(error)")
+        stream = nil
+        receiver = nil
+        isRunning = false
+        generation += 1
+        consumed = 0
+        lastHandOver = 0
+        // The display may have changed under it.
+        invalidateFilter()
+        onInterruption?()
     }
 }

@@ -122,6 +122,7 @@ final class FoldDeciderTests: XCTestCase {
         var tracker = AngleTracker()
         tracker.reset(to: 130, at: 0)
         var decider = FoldDecider(startAngle: 100)
+        XCTAssertEqual(decider.update(tracker: tracker, enabled: true, time: 0), .idle)
         tracker.ingest(120, at: 0.1)
         XCTAssertEqual(decider.update(tracker: tracker, enabled: true, time: 0.1), .armed)
         tracker.ingest(105, at: 0.2)
@@ -141,6 +142,74 @@ final class FoldDeciderTests: XCTestCase {
         var decider = FoldDecider(startAngle: 100)
         tracker.ingest(90, at: 0.1)
         XCTAssertEqual(decider.update(tracker: tracker, enabled: false, time: 0.1), .idle)
+    }
+
+    /// Issue #1: Cinematic starts at 100°, a lid resting just under it, and
+    /// four-finger swipes between Spaces pressing on the base. The wobble
+    /// reads as closing; it must not put a fold up or start a capture.
+    func testAWobblingLidByTheStartAngleNeverFolds() {
+        var tracker = AngleTracker()
+        tracker.reset(to: 99.5, at: 0)
+        var decider = FoldDecider(startAngle: 100)
+        var sawClosing = false
+        for i in 0..<200 {
+            let time = Double(i) * 0.1
+            // Pressed down 0.6° in a tenth of a second, then back.
+            tracker.ingest(99.5 - (i % 4 == 1 ? 0.6 : i % 4 == 2 ? 0.3 : 0), at: time)
+            sawClosing = sawClosing || tracker.isClosing(at: time, within: decider.closingMemory)
+            XCTAssertEqual(decider.update(tracker: tracker, enabled: true, time: time), .idle, "at \(time) s")
+        }
+        XCTAssertTrue(sawClosing, "the wobble is fast enough to read as closing")
+    }
+
+    func testClosingFromRestBelowTheStartAngleNeedsRealTravel() {
+        var tracker = AngleTracker()
+        tracker.reset(to: 98, at: 0)
+        var decider = FoldDecider(startAngle: 100)
+        XCTAssertEqual(decider.update(tracker: tracker, enabled: true, time: 0), .idle)
+        tracker.ingest(97, at: 0.1)
+        XCTAssertEqual(decider.update(tracker: tracker, enabled: true, time: 0.1), .idle)
+        tracker.ingest(95.5, at: 0.2)
+        XCTAssertEqual(decider.update(tracker: tracker, enabled: true, time: 0.2), .active)
+    }
+
+    func testAFoldBackAboveTheStartAngleLetsGo() {
+        var tracker = AngleTracker()
+        tracker.reset(to: 120, at: 0)
+        var decider = FoldDecider(startAngle: 100)
+        decider.update(tracker: tracker, enabled: true, time: 0)
+        tracker.ingest(105, at: 0.1)
+        decider.update(tracker: tracker, enabled: true, time: 0.1)
+        tracker.ingest(95, at: 0.2)
+        XCTAssertEqual(decider.update(tracker: tracker, enabled: true, time: 0.2), .active)
+        // Opened again to 102°, inside the hysteresis, and left there.
+        tracker.ingest(102, at: 1)
+        XCTAssertEqual(decider.update(tracker: tracker, enabled: true, time: 1), .active)
+        tracker.ingest(102, at: 1.5)
+        XCTAssertEqual(decider.update(tracker: tracker, enabled: true, time: 1.5), .active)
+        tracker.ingest(102, at: 1.7)
+        XCTAssertEqual(decider.update(tracker: tracker, enabled: true, time: 1.7), .idle)
+        // The same wobble there now does nothing.
+        tracker.ingest(101.4, at: 1.8)
+        XCTAssertEqual(decider.update(tracker: tracker, enabled: true, time: 1.8), .idle)
+        tracker.ingest(100.8, at: 1.9)
+        XCTAssertEqual(decider.update(tracker: tracker, enabled: true, time: 1.9), .idle)
+    }
+
+    func testAFoldHeldBelowTheStartAngleStays() {
+        var tracker = AngleTracker()
+        tracker.reset(to: 120, at: 0)
+        var decider = FoldDecider(startAngle: 100)
+        decider.update(tracker: tracker, enabled: true, time: 0)
+        tracker.ingest(105, at: 0.1)
+        decider.update(tracker: tracker, enabled: true, time: 0.1)
+        tracker.ingest(90, at: 0.2)
+        XCTAssertEqual(decider.update(tracker: tracker, enabled: true, time: 0.2), .active)
+        for i in 1...100 {
+            let time = 0.2 + Double(i) * 0.1
+            tracker.ingest(90, at: time)
+            XCTAssertEqual(decider.update(tracker: tracker, enabled: true, time: time), .active)
+        }
     }
 }
 
